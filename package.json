@@ -1,0 +1,10 @@
+{
+  "name": "cccDataImporter",
+  "private": true,
+  "version": "1.0.0",
+  "repository": "https://github.com/clockcrockwork/cccDataImporter",
+  "author": "clockcrockwork <86189309+clockcrockwork@users.noreply.github.com>",
+  "workspaces": [
+    "workspaces/*"
+  ]
+}

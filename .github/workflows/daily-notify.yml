@@ -1,0 +1,27 @@
+name: Notify Popular Repositories and Products
+
+on:
+  schedule:
+    - cron: '58 14 * * *' # 日本時間の23:58に対応
+  workflow_dispatch:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Notify popular repositories and products
+        env:
+          GITHUB_WEBHOOK_URL: ${{ secrets.GITHUB_WEBHOOK_URL }}
+          PRODUCT_HUNT_WEBHOOK_URL: ${{ secrets.PRODUCT_HUNT_WEBHOOK_URL }}
+        run: node workspaces/dailyNotify.js

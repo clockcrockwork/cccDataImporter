@@ -1,0 +1,31 @@
+name: Fetch RSS Feeds
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # 5分ごとに実行
+  workflow_dispatch:
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Run RSS fetch script
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          ERROR_WEBHOOK_URL: ${{ secrets.ERROR_WEBHOOK_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPO: ${{ secrets.GITHUB_REPO }}
+          FEED_PARENT_WEBHOOK_URL: ${{ secrets.FEED_PARENT_WEBHOOK_URL }}
+        run: node workspaces/fetchRss/index.js
