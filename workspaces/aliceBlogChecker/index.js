@@ -9,34 +9,56 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const ALICE_DISCORD_WEBHOOK_URL = process.env.ALICE_DISCORD_WEBHOOK_URL;
 const ERROR_DISCORD_WEBHOOK_URL = process.env.ERROR_DISCORD_WEBHOOK_URL;
+const SUPABASE_FEED_TABLE_NAME = process.env.SUPABASE_FEED_TABLE_NAME;
+const SUPABASE_FEED_TYPE_ALICE = process.env.SUPABASE_FEED_TYPE_ALICE;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const timezone = 'Asia/Tokyo';
 
-const sendErrorToDiscord = async (errorMessage) => {
-  try {
-    await axios.post(ERROR_DISCORD_WEBHOOK_URL, {
-      content: `【ALICE Channel】Error occurred: ${errorMessage}`
-    }, {
-      headers: { 'Content-Type': 'application/json' }
-    });
-  } catch (error) {
-    console.error('Failed to send error message to Discord:', error.response?.status, error.response?.data);
-  }
-};
+async function handleError(error) {
+  const errorWebhookUrl = process.env.ERROR_WEBHOOK_URL;
+  const githubToken = process.env.GITHUB_TOKEN;
+  const githubRepo = process.env.GITHUB_REPO;
+
+  const sanitizedError = {
+      message: error.message.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]'),
+      stack: error.stack.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]')
+  };
+
+  await fetch(errorWebhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: `Error: ${sanitizedError.message}` })
+  });
+
+  await fetch(
+      `https://api.github.com/repos/${githubRepo}/issues`,
+      {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `token ${githubToken}`
+          },
+          body: JSON.stringify({
+              title: `ALICE Channel Error: ${sanitizedError.message}`,
+              body: sanitizedError.stack,
+          })
+      }
+  );
+}
 
 const fetchFeeds = async () => {
   try {
     const { data, error } = await supabase
-      .from('rss_feeds')
+      .from(SUPABASE_FEED_TABLE_NAME)
       .select('*')
-      .eq('feed_type', 'alice');
+      .eq('feed_type', SUPABASE_FEED_TYPE_ALICE);
 
     if (error) throw error;
     return data;
   } catch (error) {
-    await sendErrorToDiscord(`Error fetching feeds: ${error.message}`);
+    await handleError(error);
     return [];
   }
 };
@@ -55,7 +77,7 @@ const checkAndUpdateFeeds = async (feeds) => {
         const latestPubdateUtc = latestPubdate.setZone('UTC').toISO();
 
         const { data, error } = await supabase
-          .from('rss_feeds')
+          .from(SUPABASE_FEED_TABLE_NAME)
           .upsert({
             id: feed.id,
             feed_type: feed.feed_type,
@@ -77,7 +99,7 @@ const checkAndUpdateFeeds = async (feeds) => {
       await postUnsplashImageToDiscord(ALICE_DISCORD_WEBHOOK_URL);
     }
   } catch (error) {
-    await sendErrorToDiscord(error.message);
+    await handleError(error);
   }
 };
 
@@ -116,7 +138,7 @@ const postToDiscord = async (feed, entries, lastRetrieved = null) => {
         headers: { 'Content-Type': 'application/json' }
       });
     } catch (error) {
-      await sendErrorToDiscord(`Error posting to Discord: ${error.message}`);
+      await handleError(error);
     }
   }
 };
@@ -141,7 +163,7 @@ const postUnsplashImageToDiscord = async (webhook) => {
       throw new Error(`Failed to send message: ${discordResponse.status}`);
     }
   } catch (error) {
-    await sendErrorToDiscord(`Error fetching or posting Unsplash image: ${error.message}`);
+    await handleError(error);
   }
 };
 
