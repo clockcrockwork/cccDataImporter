@@ -1,0 +1,44 @@
+name: Send Cat Image and Wiki Article
+
+on:
+  schedule:
+    - cron: '*/30 * * * *' # 30分ごとに実行
+  workflow_dispatch:
+
+jobs:
+  send_cat_and_wiki:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          cd packages/sendPy
+          python -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+
+      - name: Send cat image to Discord
+        env:
+          CAT_DISCORD_WEBHOOK_URL: ${{ secrets.CAT_DISCORD_WEBHOOK_URL }}
+          ERROR_DISCORD_WEBHOOK_URL: ${{ secrets.ERROR_DISCORD_WEBHOOK_URL }}
+          CAT_API_KEY: ${{ secrets.CAT_API_KEY }}
+        run: |
+          cd packages/sendPy
+          source venv/bin/activate
+          python send_cat_image.py
+
+      - name: Send wiki article to Discord
+        env:
+          WIKI_DISCORD_WEBHOOK_URL: ${{ secrets.WIKI_DISCORD_WEBHOOK_URL }}
+          ERROR_DISCORD_WEBHOOK_URL: ${{ secrets.ERROR_DISCORD_WEBHOOK_URL }}
+        run: |
+          cd packages/sendPy
+          source venv/bin/activate
+          python send_wiki.py

@@ -3,8 +3,15 @@
   "private": true,
   "version": "1.0.0",
   "repository": "https://github.com/clockcrockwork/cccDataImporter",
-  "author": "clockcrockwork <86189309+clockcrockwork@users.noreply.github.com>",
+  "author": "clockcrockwork",
   "workspaces": [
     "workspaces/*"
-  ]
+  ],
+  "dependencies": {
+    "feedparser": "^2.2.10",
+    "html-to-text": "^9.0.5",
+    "node-fetch": "^3.3.2",
+    "rss-parser": "^3.13.0",
+    "sharp": "^0.33.4"
+  }
 }

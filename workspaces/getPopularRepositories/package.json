@@ -1,6 +1,5 @@
 {
   "name": "getPopularRepositories",
   "version": "1.0.0",
-  "main": "index.js",
-  "license": "MIT"
+  "main": "index.js"
 }

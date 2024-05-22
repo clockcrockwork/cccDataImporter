@@ -1,0 +1,9 @@
+{
+  "name": "sendPyCat",
+  "version": "1.0.0",
+  "main": "send_cat_image.py",
+  "scripts": {
+    "start": "python send_cat_image.py"
+  },
+  "dependencies": {}
+}

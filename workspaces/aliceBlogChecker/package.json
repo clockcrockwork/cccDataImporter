@@ -1,0 +1,12 @@
+{
+  "name": "aliceBlogChecker",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.43.2",
+    "axios": "^1.7.2"
+  }
+}
