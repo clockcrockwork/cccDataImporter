@@ -8,7 +8,6 @@ const { DateTime } = require('luxon');
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const ALICE_DISCORD_WEBHOOK_URL = process.env.ALICE_DISCORD_WEBHOOK_URL;
-const ERROR_DISCORD_WEBHOOK_URL = process.env.ERROR_DISCORD_WEBHOOK_URL;
 const SUPABASE_FEED_TABLE_NAME = process.env.SUPABASE_FEED_TABLE_NAME;
 const SUPABASE_FEED_TYPE_ALICE = process.env.SUPABASE_FEED_TYPE_ALICE;
 
@@ -29,7 +28,7 @@ async function handleError(error) {
   await fetch(errorWebhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: `Error: ${sanitizedError.message}` })
+      body: JSON.stringify({ content: `Error: ${error.message}` })
   });
 
   await fetch(
@@ -67,6 +66,7 @@ const checkAndUpdateFeeds = async (feeds) => {
   let updatesFound = false;
 
   try {
+    const accessToken = await authenticateUser();
     for (const feed of feeds) {
       const parsedFeed = await feedparser.parse({ uri: feed.url });
 
@@ -109,7 +109,19 @@ const convertHtmlToMarkdown = (htmlContent) => {
     linkHrefBaseUrl: ''
   });
 };
-
+const authenticateUser = async () => {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: SUPABASE_EMAIL,
+      password: SUPABASE_PASSWORD
+    });
+    if (error) throw error;
+    return data.session.access_token;
+  } catch (error) {
+    await sendErrorToDiscord(`Error authenticating user: ${error.message}`);
+    throw error;
+  }
+};
 const postToDiscord = async (feed, entries, lastRetrieved = null) => {
   entries.reverse();
   

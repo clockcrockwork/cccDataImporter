@@ -11,6 +11,8 @@ const supabaseKey = process.env.SUPABASE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 const table = process.env.SUPABASE_FEED_TABLE_NAME;
 const feedtype = process.env.SUPABASE_FEED_TYPE_X;
+const bucket = process.env.SUPABASE_STORAGE_BUCKET_NAME;
+const folder = process.env.SUPABASE_STORAGE_FOLDER_NAME || '';
 const parser = new Parser();
 const pipelineAsync = promisify(pipeline);
 
@@ -50,7 +52,19 @@ async function notifyDiscord(webhookUrl, article, webhookType, threadId = null) 
         body: JSON.stringify(payload)
     });
 }
-
+const authenticateUser = async () => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: SUPABASE_EMAIL,
+        password: SUPABASE_PASSWORD
+      });
+      if (error) throw error;
+      return data.session.access_token;
+    } catch (error) {
+      await sendErrorToDiscord(`Error authenticating user: ${error.message}`);
+      throw error;
+    }
+  };
 async function handleError(error) {
     const errorWebhookUrl = process.env.ERROR_WEBHOOK_URL;
     const githubToken = process.env.GITHUB_TOKEN;
@@ -64,7 +78,7 @@ async function handleError(error) {
     await fetch(errorWebhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: `Error: ${sanitizedError.message}` })
+        body: JSON.stringify({ content: `Error: ${error.message}` })
     });
 
     await fetch(
@@ -86,6 +100,7 @@ async function handleError(error) {
 async function processImage(imageUrl, threadId) {
     const response = await fetch(imageUrl);
     const tempImagePath = `/tmp/${threadId}`;
+    const updateImagePath = folder ? `${folder}/${threadId}.png` : `${threadId}.png`;
 
     await pipelineAsync(response.body, createWriteStream(tempImagePath));
 
@@ -100,8 +115,9 @@ async function processImage(imageUrl, threadId) {
     }
 
     await supabase.storage
-        .from('FeedThumbs')
-        .upload(`${threadId}.png`, createReadStream(`${tempImagePath}.png`), {
+        .from(bucket)
+        .upload(`${updateImagePath}.png`, createReadStream(`${tempImagePath}.png`), {
+            cacheControl: '31536000',
             upsert: true
         });
 
@@ -113,7 +129,7 @@ async function processImage(imageUrl, threadId) {
 async function main() {
     try {
         const feeds = await getRssFeeds();
-
+        const accessToken = await authenticateUser();
         for (const feed of feeds) {
             const newArticles = await checkForNewArticles(feed.url, feed['last-retrieved']);
             for (const article of newArticles) {

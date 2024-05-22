@@ -4,7 +4,7 @@ import os
 
 # Discord Webhook URLs
 CAT_DISCORD_WEBHOOK_URL = os.getenv('CAT_DISCORD_WEBHOOK_URL')
-ERROR_DISCORD_WEBHOOK_URL = os.getenv('ERROR_DISCORD_WEBHOOK_URL')
+ERROR_WEBHOOK_URL = os.getenv('ERROR_WEBHOOK_URL')
 CAT_API_KEY = os.getenv('CAT_API_KEY')
 
 # フッターのテキスト
@@ -23,7 +23,7 @@ def send_error_to_discord(error_message: str):
         "content": f"【Cat Channel】Error occurred: {error_message}"
     }
     headers = {"Content-Type": "application/json"}
-    response = requests.post(ERROR_DISCORD_WEBHOOK_URL, json=error_data, headers=headers)
+    response = requests.post(ERROR_WEBHOOK_URL, json=error_data, headers=headers)
     if response.status_code != 204:
         print(f"Failed to send error message: {response.status_code}, {response.text}")
 

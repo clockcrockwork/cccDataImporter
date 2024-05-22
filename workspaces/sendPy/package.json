@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "send_cat_image.py",
   "scripts": {
-    "start": "python send_cat_image.py"
+    "start:cat": "python send_cat_image.py",
+    "start:wiki": "python send_wiki.py"
   },
   "dependencies": {}
 }
