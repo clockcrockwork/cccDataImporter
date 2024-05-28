@@ -6,21 +6,21 @@ import { pipeline } from 'stream';
 import { promisify } from 'util';
 import sharp from 'sharp';
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
-const table = process.env.SUPABASE_FEED_TABLE_NAME;
-const feedtype = process.env.SUPABASE_FEED_TYPE_X;
-const bucket = process.env.SUPABASE_STORAGE_BUCKET_NAME;
-const folder = process.env.SUPABASE_STORAGE_FOLDER_NAME || '';
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_FEED_TABLE_NAME = process.env.SUPABASE_FEED_TABLE_NAME;
+const SUPABASE_FEED_TYPE_X = process.env.SUPABASE_FEED_TYPE_X;
+const SUPABASE_STORAGE_BUCKET_NAME = process.env.SUPABASE_STORAGE_BUCKET_NAME;
+const SUPABASE_STORAGE_FOLDER_NAME = process.env.SUPABASE_STORAGE_FOLDER_NAME || '';
 const parser = new Parser();
 const pipelineAsync = promisify(pipeline);
 
 async function getRssFeeds() {
     const { data, error } = await supabase
-        .from(table)
+        .from(SUPABASE_FEED_TABLE_NAME)
         .select('*')
-        .eq('feed-type', feedtype);
+        .eq('feed-type', SUPABASE_FEED_TYPE_X);
 
     if (error) {
         console.error('Error fetching RSS feeds:', error);
@@ -66,7 +66,7 @@ const authenticateUser = async () => {
     }
   };
 async function handleError(error) {
-    const errorWebhookUrl = process.env.ERROR_WEBHOOK_URL;
+    const errorWebhookUrl = process.env.ERROR_DISCORD_WEBHOOK_URL;
     const githubToken = process.env.GITHUB_TOKEN;
     const githubRepo = process.env.GITHUB_REPO;
 
@@ -100,7 +100,7 @@ async function handleError(error) {
 async function processImage(imageUrl, threadId) {
     const response = await fetch(imageUrl);
     const tempImagePath = `/tmp/${threadId}`;
-    const updateImagePath = folder ? `${folder}/${threadId}.png` : `${threadId}.png`;
+    const updateImagePath = SUPABASE_STORAGE_FOLDER_NAME ? `${SUPABASE_STORAGE_FOLDER_NAME}/${threadId}.png` : `${threadId}.png`;
 
     await pipelineAsync(response.body, createWriteStream(tempImagePath));
 
@@ -115,7 +115,7 @@ async function processImage(imageUrl, threadId) {
     }
 
     await supabase.storage
-        .from(bucket)
+        .from(SUPABASE_STORAGE_BUCKET_NAME)
         .upload(`${updateImagePath}.png`, createReadStream(`${tempImagePath}.png`), {
             cacheControl: '31536000',
             upsert: true
@@ -135,7 +135,7 @@ async function main() {
             for (const article of newArticles) {
                 await notifyDiscord(feed['webhook-url'], article, feed['webhook-type'], feed.id);
                 await supabase
-                    .from(table)
+                    .from(SUPABASE_FEED_TABLE_NAME)
                     .update({ 'last-retrieved': article.pubDate })
                     .eq('id', feed.id);
 

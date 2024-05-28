@@ -16,28 +16,28 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const timezone = 'Asia/Tokyo';
 
 async function handleError(error) {
-  const errorWebhookUrl = process.env.ERROR_WEBHOOK_URL;
-  const githubToken = process.env.GITHUB_TOKEN;
-  const githubRepo = process.env.GITHUB_REPO;
+  const ERROR_DISCORD_WEBHOOK_URL = process.env.ERROR_DISCORD_WEBHOOK_URL;
+  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+  const GITHUB_REPO = process.env.GITHUB_REPO;
 
   const sanitizedError = {
       message: error.message.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]'),
       stack: error.stack.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]')
   };
 
-  await fetch(errorWebhookUrl, {
+  await fetch(ERROR_DISCORD_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: `Error: ${error.message}` })
   });
 
   await fetch(
-      `https://api.github.com/repos/${githubRepo}/issues`,
+      `https://api.github.com/repos/${GITHUB_REPO}/issues`,
       {
           method: 'POST',
           headers: {
               'Content-Type': 'application/json',
-              'Authorization': `token ${githubToken}`
+              'Authorization': `token ${GITHUB_TOKEN}`
           },
           body: JSON.stringify({
               title: `ALICE Channel Error: ${sanitizedError.message}`,
