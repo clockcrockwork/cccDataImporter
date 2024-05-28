@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Visual Send To Ccc Discord",
+  "name": "Visual Send To CCC Discord",
   "version": "0.1.0",
-  "description": "My Chrome Extension",
+  "description": "Capture to Discord CCC Server Only",
   "icons": {
     "16": "icons/icon_16.png",
     "32": "icons/icon_32.png",
@@ -13,7 +13,7 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "Visual Send To Ccc Discord",
+    "default_title": "Visual Send To CCC Discord",
     "default_popup": "popup.html"
   },
   "permissions": [
