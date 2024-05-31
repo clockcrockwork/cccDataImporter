@@ -36,22 +36,29 @@ jobs:
         fi
         echo "errors=$(jq '.error' daily-check.json)" >> $GITHUB_ENV
 
-    - name: Create Pull Request
+    - name: Set up Git
       run: |
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+    - name: Create Pull Request
+      env:
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      run: |
         git checkout -b update-daily-check
         git add daily-check.json
         git commit -m 'Update daily-check.json'
         git push -u origin update-daily-check
-        gh pr create --title "Daily Check Update" --body "Auto-updated daily-check.json" --head update-daily-check --base main
+        gh pr create --title "Daily Check Update" --body "Auto-updated daily-check.json" --head update-daily-check --base main --repo clockcrockwork/cccDataImporter --token $GH_TOKEN
 
     - name: Merge Pull Request
+      env:
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
-        pr_number=$(gh pr list --state open --head update-daily-check --json number --jq '.[0].number')
-        gh pr merge $pr_number --merge
+        pr_number=$(gh pr list --state open --head update-daily-check --json number --jq '.[0].number' --repo clockcrockwork/cccDataImporter --token $GH_TOKEN)
+        gh pr merge $pr_number --merge --repo clockcrockwork/cccDataImporter --token $GH_TOKEN
 
     - name: Notify Discord if errors found
       if: ${{ env.errors != 0 }}
       run: |
-        curl -X POST -H "Content-Type: application/json" -d "{\"content\": \"Open issues found: ${{ env.errors }}\"}" ${{ secrets.ERROR_DISCORD_WEBHOOK_URL }}
+        curl -X POST -H "Content-Type: application/json" -d "{\"content\": \"Open issues found: ${{ env.errors }}\"}" ${{ secrets.ERROR_DISCORD_WEBHOOK }}
