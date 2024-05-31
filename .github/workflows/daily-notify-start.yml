@@ -1,0 +1,34 @@
+name: Send What is today from Wikipedia to Discord
+
+on:
+  schedule:
+    - cron: '10 15 * * *' # 日本時間の0:10に対応
+  workflow_dispatch:
+
+jobs:
+  send_today_wiki:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          cd packages/sendPy
+          python -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+
+      - name: Send What is today from Wikipedia to Discord
+        env:
+          WIKI_DISCORD_WEBHOOK_URL: ${{ secrets.WIKI_DISCORD_WEBHOOK_URL }}
+          ERROR_DISCORD_WEBHOOK_URL: ${{ secrets.ERROR_DISCORD_WEBHOOK_URL }}
+        run: |
+          cd packages/sendPy
+          source venv/bin/activate
+          python send_today_wiki.py
