@@ -17,7 +17,7 @@ const timezone = 'Asia/Tokyo';
 
 async function handleError(error) {
   const ERROR_DISCORD_WEBHOOK_URL = process.env.ERROR_DISCORD_WEBHOOK_URL;
-  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+  const GH_TOKEN = process.env.GH_TOKEN;
   const GITHUB_REPO = process.env.GITHUB_REPO;
 
   const sanitizedError = {
@@ -37,7 +37,7 @@ async function handleError(error) {
           method: 'POST',
           headers: {
               'Content-Type': 'application/json',
-              'Authorization': `token ${GITHUB_TOKEN}`
+              'Authorization': `token ${GH_TOKEN}`
           },
           body: JSON.stringify({
               title: `ALICE Channel Error: ${sanitizedError.message}`,

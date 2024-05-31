@@ -25,7 +25,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           ERROR_DISCORD_WEBHOOK_URL: ${{ secrets.ERROR_DISCORD_WEBHOOK_URL }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GITHUB_REPO: ${{ secrets.GITHUB_REPO }}
           FEED_PARENT_WEBHOOK_URL: ${{ secrets.FEED_PARENT_WEBHOOK_URL }}
         run: node workspaces/fetchRss/index.js

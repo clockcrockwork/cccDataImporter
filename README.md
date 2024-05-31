@@ -3,7 +3,7 @@
 ## setting envroments
 
 ### error hundler
-- GITHUB_TOKEN
+- GH_TOKEN
 - GITHUB_REPO
 
 
