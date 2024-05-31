@@ -17,10 +17,9 @@ jobs:
       with:
         node-version: '20'
 
-    - name: Set timezone to JST
+    - name: Set timezone environment variable to JST
       run: |
-        sudo cp /usr/share/zoneinfo/Asia/Tokyo /etc/localtime
-        sudo echo 'Asia/Tokyo' > /etc/timezone
+        echo "TZ=Asia/Tokyo" >> $GITHUB_ENV
 
     - name: Install dependencies
       run: npm install
