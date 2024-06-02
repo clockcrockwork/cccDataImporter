@@ -30,7 +30,7 @@ jobs:
         id: create_pr
         uses: peter-evans/create-pull-request@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_TOKEN }}
           commit-message: 'Update day key in daily.json'
           branch: 'update-daily-json'
           base: 'main'
