@@ -66,7 +66,7 @@ const authenticateUser = async () => {
     }
   };
 async function handleError(error) {
-    const errorWebhookUrl = process.env.ERROR_DISCORD_WEBHOOK_URL;
+    const errorWebhookUrl = process.env.ERROR_WEBHOOK_URL;
     const githubToken = process.env.GH_TOKEN;
     const githubRepo = process.env.GITHUB_REPO;
 

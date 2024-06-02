@@ -27,7 +27,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           ALICE_DISCORD_WEBHOOK_URL: ${{ secrets.ALICE_DISCORD_WEBHOOK_URL }}
-          ERROR_DISCORD_WEBHOOK_URL: ${{ secrets.ERROR_DISCORD_WEBHOOK_URL }}
+          ERROR_WEBHOOK_URL: ${{ secrets.ERROR_WEBHOOK_URL }}
         run: |
           cd packages/aliceBlogChecker
           node index.js

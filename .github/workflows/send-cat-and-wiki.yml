@@ -27,7 +27,7 @@ jobs:
       - name: Send cat image to Discord
         env:
           CAT_DISCORD_WEBHOOK_URL: ${{ secrets.CAT_DISCORD_WEBHOOK_URL }}
-          ERROR_DISCORD_WEBHOOK_URL: ${{ secrets.ERROR_DISCORD_WEBHOOK_URL }}
+          ERROR_WEBHOOK_URL: ${{ secrets.ERROR_WEBHOOK_URL }}
           CAT_API_KEY: ${{ secrets.CAT_API_KEY }}
         run: |
           cd packages/sendPy
@@ -37,7 +37,7 @@ jobs:
       - name: Send wiki article to Discord
         env:
           WIKI_DISCORD_WEBHOOK_URL: ${{ secrets.WIKI_DISCORD_WEBHOOK_URL }}
-          ERROR_DISCORD_WEBHOOK_URL: ${{ secrets.ERROR_DISCORD_WEBHOOK_URL }}
+          ERROR_WEBHOOK_URL: ${{ secrets.ERROR_WEBHOOK_URL }}
         run: |
           cd packages/sendPy
           source venv/bin/activate
