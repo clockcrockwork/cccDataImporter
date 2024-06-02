@@ -1,4 +1,4 @@
-name: Review PR to update syllabus
+name: Review PR
 
 on:
   pull_request:
