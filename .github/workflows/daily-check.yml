@@ -21,9 +21,12 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y jq
-        sudo apt-key adv --apt-get-install --yes install apt-transport-https
+        sudo mkdir -p /etc/apt/keyrings
+        curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo tee /etc/apt/keyrings/microsoft.gpg > /dev/null
+        sudo chmod go+r /etc/apt/keyrings/microsoft.gpg
+        sudo bash -c 'echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/microsoft-prod/ jammy main" > /etc/apt/sources.list.d/microsoft-prod.list'
         sudo apt-get update
-        sudo apt-get install -y gh  
+        sudo apt-get install -y gh
     - name: Check and update daily-check.json
       id: update-json
       run: |
