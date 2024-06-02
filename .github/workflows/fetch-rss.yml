@@ -24,7 +24,7 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          ERROR_DISCORD_WEBHOOK_URL: ${{ secrets.ERROR_DISCORD_WEBHOOK_URL }}
+          ERROR_WEBHOOK_URL: ${{ secrets.ERROR_WEBHOOK_URL }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GITHUB_REPO: ${{ secrets.GITHUB_REPO }}
           FEED_PARENT_WEBHOOK_URL: ${{ secrets.FEED_PARENT_WEBHOOK_URL }}

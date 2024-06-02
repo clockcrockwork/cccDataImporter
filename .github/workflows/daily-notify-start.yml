@@ -27,7 +27,7 @@ jobs:
       - name: Send What is today from Wikipedia to Discord
         env:
           WIKI_DISCORD_WEBHOOK_URL: ${{ secrets.WIKI_DISCORD_WEBHOOK_URL }}
-          ERROR_DISCORD_WEBHOOK_URL: ${{ secrets.ERROR_DISCORD_WEBHOOK_URL }}
+          ERROR_WEBHOOK_URL: ${{ secrets.ERROR_WEBHOOK_URL }}
         run: |
           cd packages/sendPy
           source venv/bin/activate
