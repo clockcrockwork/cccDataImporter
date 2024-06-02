@@ -2,18 +2,22 @@ name: Daily Update
 on:
   schedule:
     - cron: '0 15 * * *' # UTCで毎日0時0分(日本時間で9時0分)に実行
-  workflow_dispatch:
 jobs:
   update-json:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+        
+      - name: Install moreutils
+        run: sudo apt-get update && sudo apt-get install -y moreutils
+        
       - name: Update day key in daily.json
         run: |
           TODAY=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           jq --arg today "$TODAY" '.day = $today' daily.json | sponge daily.json
         shell: bash
+        
       - name: Commit changes
         run: |
           git config --global user.name 'github-actions[bot]'
@@ -21,14 +25,15 @@ jobs:
           git add daily.json
           git commit -m 'Update day key in daily.json'
         shell: bash
+        
       - name: Create pull request
         uses: peter-evans/create-pull-request@v4
         with:
           token: ${{ secrets.GH_TOKEN }}
           commit-message: 'Update day key in daily.json'
           branch: 'update-daily-json'
-          base: 'main'
+          base: 'main' 
           title: 'Automated PR for daily.json update'
           body: 'This PR is automatically created by GitHub Actions.'
           labels: 'automated-pr'
-          merge-method: squash
+          merge-method: 'squash'
