@@ -1,70 +1,55 @@
-name: Daily Check
+name: Daily Update
 
 on:
   schedule:
-    - cron: '0 15 * * *'  # 00:00 JST (15:00 UTC)
-  workflow_dispatch:
+    - cron: '0 15 * * *' # 日本時間0時0分に相当するUTC時間15時0分
 
 jobs:
-  check-and-update:
+  update-json:
     runs-on: ubuntu-latest
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: '20'
+      - name: Update day key in daily.json
+        run: |
+          TODAY=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          jq --arg today "$TODAY" '.day = $today' daily.json > temp.json && mv temp.json daily.json
+        shell: bash
 
-    - name: Set timezone environment variable to JST
-      run: |
-        echo "TZ=Asia/Tokyo" >> $GITHUB_ENV
+      - name: Commit changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add daily.json
+          git commit -m 'Update day key in daily.json'
+        shell: bash
 
-    - name: Install dependencies
-      run: npm install
+      - name: Create pull request
+        id: create_pr
+        uses: peter-evans/create-pull-request@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'Update day key in daily.json'
+          branch: 'update-daily-json'
+          base: 'main'
+          title: 'Automated PR for daily.json update'
+          body: 'This PR is automatically created by GitHub Actions.'
+          labels: 'automated-pr'
 
-    - name: Check and update daily-check.json
-      id: update-json
-      run: |
-        now=$(date --iso-8601=seconds)
-        if [ ! -f daily-check.json ]; then
-          echo '{"day": "'$now'", "error": 0}' > daily-check.json
-        else
-          error_count=$(gh issue list --state open | wc -l)
-          jq --arg now "$now" --argjson error "$error_count" '.day = $now | .error = $error' daily-check.json > tmp.json && mv tmp.json daily-check.json
-        fi
-        echo "errors=$(jq '.error' daily-check.json)" >> $GITHUB_ENV
+      - name: Merge pull request
+        uses: actions/github-script@v3
+        with:
+          script: |
+            const { context, github } = require('@actions/github');
+            const pr_number = context.payload.pull_request.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
 
-    - name: Set up Git
-      run: |
-        git config --global user.name 'github-actions[bot]'
-        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-
-    - name: Create and push branch
-      env:
-        GH_TOKEN: ${{ secrets.GH_TOKEN }}
-      run: |
-        git checkout -b update-daily-check
-        git add daily-check.json
-        git commit -m 'Update daily-check.json'
-        git push -u origin update-daily-check
-
-    - name: Create Pull Request
-      env:
-        GH_TOKEN: ${{ secrets.GH_TOKEN }}
-      run: |
-        gh auth login --with-token <<< "${{ secrets.GH_TOKEN }}"
-        gh pr create --base main --head update-daily-check --title "Update daily-check.json" --body "Auto-updated daily-check.json"
-
-    - name: Merge Pull Request
-      env:
-        GH_TOKEN: ${{ secrets.GH_TOKEN }}
-      run: |
-        pr_number=$(gh pr list --state open --head update-daily-check --json number --jq '.[0].number')
-        gh pr merge $pr_number --squash --auto
-
-    - name: Notify Discord if errors found
-      if: ${{ env.errors != 0 }}
-      run: |
-        curl -X POST -H "Content-Type: application/json" -d "{\"content\": \"Open issues found: ${{ env.errors }}\"}" ${{ secrets.ERROR_DISCORD_WEBHOOK }}
+            await github.pulls.merge({
+              owner: owner,
+              repo: repo,
+              pull_number: pr_number,
+              merge_method: 'squash'
+            });
