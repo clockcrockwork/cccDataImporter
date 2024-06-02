@@ -1,23 +1,18 @@
 name: Daily Update
-
 on:
   schedule:
-    - cron: '0 15 * * *' # 日本時間0時0分に相当するUTC時間15時0分
-
+    - cron: '0 15 * * *' # UTCで毎日0時0分(日本時間で9時0分)に実行
 jobs:
   update-json:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-
       - name: Update day key in daily.json
         run: |
           TODAY=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          jq --arg today "$TODAY" '.day = $today' daily.json > temp.json && mv temp.json daily.json
+          jq --arg today "$TODAY" '.day = $today' daily.json | sponge daily.json
         shell: bash
-
       - name: Commit changes
         run: |
           git config --global user.name 'github-actions[bot]'
@@ -25,9 +20,7 @@ jobs:
           git add daily.json
           git commit -m 'Update day key in daily.json'
         shell: bash
-
       - name: Create pull request
-        id: create_pr
         uses: peter-evans/create-pull-request@v4
         with:
           token: ${{ secrets.GH_TOKEN }}
@@ -37,19 +30,4 @@ jobs:
           title: 'Automated PR for daily.json update'
           body: 'This PR is automatically created by GitHub Actions.'
           labels: 'automated-pr'
-
-      - name: Merge pull request
-        uses: actions/github-script@v3
-        with:
-          script: |
-            const { context, github } = require('@actions/github');
-            const pr_number = context.payload.pull_request.number;
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-
-            await github.pulls.merge({
-              owner: owner,
-              repo: repo,
-              pull_number: pr_number,
-              merge_method: 'squash'
-            });
+          merge-method: squash
