@@ -41,7 +41,7 @@ jobs:
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
-    - name: Create Push branch
+    - name: Create and push branch
       env:
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
@@ -49,14 +49,14 @@ jobs:
         git add daily-check.json
         git commit -m 'Update daily-check.json'
         git push -u origin update-daily-check
-    
+
     - name: Create Pull Request
       env:
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
         gh auth login --with-token <<< "${{ secrets.GH_TOKEN }}"
-        gh pr create --base main --head update-daily-check --title "Update daily-check.json" --body "Update daily-check.json"
-    
+        gh pr create --base main --head update-daily-check --title "Update daily-check.json" --body "Auto-updated daily-check.json"
+
     - name: Merge Pull Request
       env:
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -67,4 +67,4 @@ jobs:
     - name: Notify Discord if errors found
       if: ${{ env.errors != 0 }}
       run: |
-        curl -X POST -H "Content-Type: application/json" -d "{\"content\": \"Open issues found: ${{ env.errors }}\"}" ${{ secrets.ERROR_WEBHOOK_URL }}
+        curl -X POST -H "Content-Type: application/json" -d "{\"content\": \"Open issues found: ${{ env.errors }}\"}" ${{ secrets.ERROR_DISCORD_WEBHOOK }}
