@@ -2,6 +2,7 @@ name: Daily Update
 on:
   schedule:
     - cron: '0 15 * * *' # UTCで毎日0時0分(日本時間で9時0分)に実行
+  workflow_dispatch:
 jobs:
   update-json:
     runs-on: ubuntu-latest
