@@ -38,25 +38,31 @@ jobs:
 
     - name: Set up Git
       run: |
-        git pull
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
     - name: Create Push branch
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
         git checkout -b update-daily-check
         git add daily-check.json
         git commit -m 'Update daily-check.json'
         git push -u origin update-daily-check
     
-    - name: Merge branch
+    - name: Create Pull Request
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
+        gh auth login --with-token <<< "${{ secrets.GH_TOKEN }}"
         gh pr create --base main --head update-daily-check --title "Update daily-check.json" --body "Update daily-check.json"
-        gh pr merge --squash --auto update-daily-check
+    
+    - name: Merge Pull Request
+      env:
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      run: |
+        pr_number=$(gh pr list --state open --head update-daily-check --json number --jq '.[0].number')
+        gh pr merge $pr_number --squash --auto
 
     - name: Notify Discord if errors found
       if: ${{ env.errors != 0 }}
