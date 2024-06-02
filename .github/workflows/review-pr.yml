@@ -1,0 +1,21 @@
+name: Review PR to update syllabus
+
+on:
+  pull_request:
+    types:
+      - labeled
+
+jobs:
+  review:
+    environment: actions
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    if: >-
+      github.event.label.name == 'automated-pr' &&
+      github.event.pull_request.user.login == 'github-actions[bot]'
+    steps:
+      - name: Review
+        uses: hmarr/auto-approve-action@v3
+        with:
+          github-token: ${{ secrets.GH_TOKEN }}
