@@ -45,10 +45,11 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
+        git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/clockcrockwork/cccDataImporter.git
         git checkout -b update-daily-check
         git add daily-check.json
         git commit -m 'Update daily-check.json'
-        git push -u origin update-daily-check
+        git push -u origin update-daily-check  
 
     - name: Create Pull Request
       env:
