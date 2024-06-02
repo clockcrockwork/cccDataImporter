@@ -1,69 +1,67 @@
 name: Daily Check
+
 on:
   schedule:
-    - cron: '0 15 * * *'  # 00:00 JST (15:00 UTC)
-  workflow_dispatch:
+    - cron: '0 15 * * *' # 毎日午後11時(UTC)に実行
 
 jobs:
-  check-and-update:
+
+  daily-check:
     runs-on: ubuntu-latest
+    
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
-    - name: Set up Node.js
-      uses: actions/setup-node@v2
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
       with:
-        node-version: '20'
-    - name: Set timezone environment variable to JST
+        node-version: 20
+        
+    - name: Install Dependencies
+      run: npm ci
+      
+    - name: Get Issue Count
+      id: issue_count
       run: |
-        echo "TZ=Asia/Tokyo" >> $GITHUB_ENV
-    - name: Install dependencies
+        issue_count=$(gh issue list --json number --jq length)
+        echo "::set-output name=count::$issue_count"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Update daily-check.json
       run: |
-        sudo apt-get update
-        sudo apt-get install -y jq
-        sudo mkdir -p /etc/apt/keyrings
-        curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo tee /etc/apt/keyrings/microsoft.gpg > /dev/null
-        sudo chmod go+r /etc/apt/keyrings/microsoft.gpg
-        sudo bash -c 'echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/microsoft-prod/ jammy main" > /etc/apt/sources.list.d/microsoft-prod.list'
-        sudo apt-get update
-        sudo apt-get install -y gh
-    - name: Check and update daily-check.json
-      id: update-json
-      run: |
-        now=$(date --iso-8601=seconds)
-        if [ ! -f daily-check.json ]; then
-          echo '{"day": "'$now'", "error": 0}' > daily-check.json
-        else
-          error_count=$(gh issue list --state open --repo ${{ github.repository }} | wc -l)
-          jq --arg now "$now" --arg error "$error_count" '.day = $now | .error = ($error|tonumber)' daily-check.json > tmp.json && mv tmp.json daily-check.json
-        fi
-        echo "errors=$(jq '.error' daily-check.json)" >> $GITHUB_ENV
-    - name: Set up Git
-      run: |
-        git config --global user.name 'github-actions[bot]'
-        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-    - name: Create and push branch
+        tmp=$(mktemp)
+        jq --arg day "$(date --iso-8601=seconds)" \
+           --arg errors "${{ steps.issue_count.outputs.count }}" \
+           '.day = $day | .errors = ($errors|tonumber)' \
+           daily-check.json > "$tmp" && mv "$tmp" daily-check.json
+           
+    - name: Commit Changes
       env:
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
-        git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }}.git
-        git checkout -b update-daily-check
+        git config --global user.name 'GitHub Actions Bot'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/clockcrockwork/cccDataImporter.git
         git add daily-check.json
-        git commit -m 'Update daily-check.json'
-        git push -u origin update-daily-check
+        git commit -m "Update daily-check.json"
+        git push -u origin HEAD
+
     - name: Create Pull Request
       env:
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
         gh auth login --with-token <<< "${{ secrets.GH_TOKEN }}"
         gh pr create --base main --head update-daily-check --title "Update daily-check.json" --body "Auto-updated daily-check.json"
+
     - name: Merge Pull Request
       env:
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
         pr_number=$(gh pr list --state open --head update-daily-check --json number --jq '.[0].number')
-        gh pr merge $pr_number --squash --merge
+        gh pr merge $pr_number --squash --auto
+
     - name: Notify Discord if errors found
-      if: ${{ env.errors != 0 }}
+      if: ${{ steps.issue_count.outputs.count != 0 }}
       run: |
-        curl -X POST -H "Content-Type: application/json" -d "{\"content\": \"Open issues found: ${{ env.errors }}\"}" ${{ secrets.ERROR_DISCORD_WEBHOOK }}
+        curl -X POST -H "Content-Type: application/json" -d "{\"content\": \"Open issues found: ${{ steps.issue_count.outputs.count }}\"}" ${{ secrets.ERROR_DISCORD_WEBHOOK }}
