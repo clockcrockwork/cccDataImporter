@@ -1,8 +1,8 @@
 name: Alice Blog Checker
 
 on:
-  schedule:
-    - cron: '*/30 * * * *' # 30分ごとに実行
+  # schedule:
+  #   - cron: '*/30 * * * *' # 30分ごとに実行
   workflow_dispatch:
 
 jobs:
