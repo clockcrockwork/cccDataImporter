@@ -29,5 +29,5 @@ jobs:
           ALICE_DISCORD_WEBHOOK_URL: ${{ secrets.ALICE_DISCORD_WEBHOOK_URL }}
           ERROR_WEBHOOK_URL: ${{ secrets.ERROR_WEBHOOK_URL }}
         run: |
-          node index.js
+          node src/index.js
         working-directory: packages/aliceBlogChecker
