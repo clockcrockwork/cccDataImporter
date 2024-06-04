@@ -31,20 +31,20 @@ async function handleError(error) {
       body: JSON.stringify({ content: `Error: ${error.message}` })
   });
 
-  await fetch(
-      `https://api.github.com/repos/${GITHUB_REPO}/issues`,
-      {
-          method: 'POST',
-          headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `token ${GH_TOKEN}`
-          },
-          body: JSON.stringify({
-              title: `ALICE Channel Error: ${sanitizedError.message}`,
-              body: sanitizedError.stack,
-          })
-      }
-  );
+  // await fetch(
+  //     `https://api.github.com/repos/${GITHUB_REPO}/issues`,
+  //     {
+  //         method: 'POST',
+  //         headers: {
+  //             'Content-Type': 'application/json',
+  //             'Authorization': `token ${GH_TOKEN}`
+  //         },
+  //         body: JSON.stringify({
+  //             title: `ALICE Channel Error: ${sanitizedError.message}`,
+  //             body: sanitizedError.stack,
+  //         })
+  //     }
+  // );
 }
 
 const fetchFeeds = async () => {
