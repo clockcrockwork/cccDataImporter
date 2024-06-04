@@ -24,7 +24,7 @@ try:
     # 当日の日付を取得
     today = datetime.datetime.now()
     month = today.strftime("%m")
-    day = today.strftime("%d")
+    day = (today + datetime.timedelta(days=1)).strftime("%d")
 
     # Wikipediaの「今日は何の日？」ページを取得
     page_title = f"{month}月{day}日"
