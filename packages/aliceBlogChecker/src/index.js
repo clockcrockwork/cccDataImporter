@@ -22,7 +22,7 @@ async function handleError(error) {
 
   const sanitizedError = {
       message: error.message.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]'),
-      stack: error.stack.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]')
+      stack: error.stack ? error.stack.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]') : 'No stack trace available'
   };
 
   await fetch(ERROR_WEBHOOK_URL, {
@@ -31,20 +31,20 @@ async function handleError(error) {
       body: JSON.stringify({ content: `Error: ${error.message}` })
   });
 
-  await fetch(
-      `https://api.github.com/repos/${GITHUB_REPO}/issues`,
-      {
-          method: 'POST',
-          headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `token ${GH_TOKEN}`
-          },
-          body: JSON.stringify({
-              title: `ALICE Channel Error: ${sanitizedError.message}`,
-              body: sanitizedError.stack,
-          })
-      }
-  );
+  // await fetch(
+  //     `https://api.github.com/repos/${GITHUB_REPO}/issues`,
+  //     {
+  //         method: 'POST',
+  //         headers: {
+  //             'Content-Type': 'application/json',
+  //             'Authorization': `token ${GH_TOKEN}`
+  //         },
+  //         body: JSON.stringify({
+  //             title: `ALICE Channel Error: ${sanitizedError.message}`,
+  //             body: sanitizedError.stack,
+  //         })
+  //     }
+  // );
 }
 
 const fetchFeeds = async () => {

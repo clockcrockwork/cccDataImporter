@@ -1,8 +1,8 @@
 name: Alice Blog Checker
 
 on:
-  schedule:
-    - cron: '*/30 * * * *' # 30分ごとに実行
+  # schedule:
+  #   - cron: '*/30 * * * *' # 30分ごとに実行
   workflow_dispatch:
 
 jobs:
@@ -19,8 +19,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd packages/aliceBlogChecker
           npm install
+        working-directory: packages/aliceBlogChecker
 
       - name: Run Alice Blog Checker
         env:
@@ -29,5 +29,5 @@ jobs:
           ALICE_DISCORD_WEBHOOK_URL: ${{ secrets.ALICE_DISCORD_WEBHOOK_URL }}
           ERROR_WEBHOOK_URL: ${{ secrets.ERROR_WEBHOOK_URL }}
         run: |
-          cd packages/aliceBlogChecker
-          node index.js
+          node src/index.js
+        working-directory: packages/aliceBlogChecker
