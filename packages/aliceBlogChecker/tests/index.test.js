@@ -1,5 +1,10 @@
 const { fetchFeeds } = require('../src/index');
 const { createClient } = require('@supabase/supabase-js');
+const { authenticateUser } = require('../src/index');
+const supabase = require('@supabase/supabase-js');
+const { handleError } = require('../src/index');
+
+const TEST_FEED_URL = process.env.TEST_FEED;
 
 jest.mock('@supabase/supabase-js', () => {
   return {
@@ -8,7 +13,7 @@ jest.mock('@supabase/supabase-js', () => {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
       then: jest.fn((callback) => {
-        return callback({ data: [{ id: 1, url: 'https://example.com/rss' }], error: null });
+        return callback({ data: [{ id: 1, url: TEST_FEED_URL }], error: null });
       }),
     })),
   };
@@ -22,7 +27,7 @@ jest.mock('../src/index', () => ({
 describe('fetchFeeds', () => {
   it('should fetch feeds from supabase', async () => {
     const feeds = await fetchFeeds();
-    expect(feeds).toEqual([{ id: 1, url: 'https://example.com/rss' }]);
+    expect(feeds).toEqual([{ id: 1, url: TEST_FEED_URL }]);
   });
 
   it('should handle errors', async () => {
