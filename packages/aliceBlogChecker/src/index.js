@@ -4,12 +4,24 @@ const feedparser = require('feedparser-promised');
 const htmlToText = require('html-to-text');
 const { JSDOM } = require('jsdom');
 const { DateTime } = require('luxon');
+require('dotenv').config({ path: '../../.env' });
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const ALICE_DISCORD_WEBHOOK_URL = process.env.ALICE_DISCORD_WEBHOOK_URL;
 const SUPABASE_FEED_TABLE_NAME = process.env.SUPABASE_FEED_TABLE_NAME;
 const SUPABASE_FEED_TYPE_ALICE = process.env.SUPABASE_FEED_TYPE_ALICE;
+console.log({
+  SUPABASE_URL,
+  SUPABASE_KEY,
+  ALICE_DISCORD_WEBHOOK_URL,
+  SUPABASE_FEED_TABLE_NAME,
+  SUPABASE_FEED_TYPE_ALICE
+});
+
+if (!SUPABASE_URL || !SUPABASE_KEY || !ALICE_DISCORD_WEBHOOK_URL || !SUPABASE_FEED_TABLE_NAME || !SUPABASE_FEED_TYPE_ALICE) {
+  throw new Error("Missing required environment variables.");
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -20,17 +32,46 @@ async function handleError(error) {
   const GH_TOKEN = process.env.GH_TOKEN;
   const GITHUB_REPO = process.env.GITHUB_REPO;
 
-  const sanitizedError = {
-      message: error.message.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]'),
-      stack: error.stack ? error.stack.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]') : 'No stack trace available'
-  };
+  // エラーがオブジェクトの場合、messageとstackを取り出す
+  if (error instanceof Error) {
+    error = {
+      message: error.message,
+      stack: error.stack
+    };
+  }
+  // エラーが文字列の場合、オブジェクトに変換する
+  if (typeof error === 'string') {
+    error = {
+      message: error
+    };
+  }
+
+  // messageとstackが文字列かどうかチェックする
+  if (typeof error.message === 'string') {
+    console.log('error.message is a string:', error.message);
+    error.message = error.message.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]');
+  } else {
+    console.error('error.message is not a string:', error.message);
+  }
+
+  if (typeof error.stack === 'string') {
+    console.log('error.stack is a string:', error.stack);
+    error.stack = error.stack.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]');
+  } else {
+    console.error('error.stack is not a string:', error.stack);
+  }
+
+  console.log(error.message);
 
   await fetch(ERROR_WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: `Error: ${error.message}` })
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: `Error: ${error.message}` })
   });
-
+  // const sanitizedError = {
+  //     message: error.message.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]'),
+  //     stack: error.stack ? error.stack.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]') : 'No stack trace available'
+  // };
   // await fetch(
   //     `https://api.github.com/repos/${GITHUB_REPO}/issues`,
   //     {
@@ -70,7 +111,30 @@ const checkAndUpdateFeeds = async (feeds) => {
     for (const feed of feeds) {
       const parsedFeed = await feedparser.parse({ uri: feed.url });
 
-      const latestPubdate = DateTime.fromRFC2822(parsedFeed[0].pubdate).setZone(timezone);
+      // 日付文字列の値をログに出力する
+      const pubdateString = parsedFeed[0].pubdate;
+      console.log('pubdateString:', pubdateString);
+
+      // 日付文字列を解析して適切なDateTimeオブジェクトを作成する関数
+      const parseDate = (dateString) => {
+        let dateTime;
+        try {
+          dateTime = DateTime.fromRFC2822(dateString).setZone(timezone);
+        } catch (e) {
+          try {
+            dateTime = DateTime.fromISO(dateString).setZone(timezone);
+          } catch (e) {
+            console.error('Invalid date format:', dateString);
+            return null;
+          }
+        }
+        return dateTime;
+      };
+
+      const latestPubdate = parseDate(pubdateString);
+      if (!latestPubdate) {
+        throw new Error(`Invalid date format: ${pubdateString}`);
+      }
       const lastRetrieved = feed.last_retrieved ? DateTime.fromISO(feed.last_retrieved).setZone(timezone) : null;
 
       if (!lastRetrieved || latestPubdate > lastRetrieved) {
@@ -112,13 +176,13 @@ const convertHtmlToMarkdown = (htmlContent) => {
 const authenticateUser = async () => {
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: SUPABASE_EMAIL,
-      password: SUPABASE_PASSWORD
+      email: process.env.SUPABASE_EMAIL,
+      password: process.env.SUPABASE_PASSWORD
     });
     if (error) throw error;
     return data.session.access_token;
   } catch (error) {
-    await sendErrorToDiscord(`Error authenticating user: ${error.message}`);
+    await handleError(`Error authenticating user: ${error.message}`);
     throw error;
   }
 };
