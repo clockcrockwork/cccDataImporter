@@ -4,20 +4,13 @@ const feedparser = require('feedparser-promised');
 const htmlToText = require('html-to-text');
 const { JSDOM } = require('jsdom');
 const { DateTime } = require('luxon');
-require('dotenv').config({ path: '../../.env' });
+require('dotenv').config({ path: '../../../.env' });
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const ALICE_DISCORD_WEBHOOK_URL = process.env.ALICE_DISCORD_WEBHOOK_URL;
 const SUPABASE_FEED_TABLE_NAME = process.env.SUPABASE_FEED_TABLE_NAME;
 const SUPABASE_FEED_TYPE_ALICE = process.env.SUPABASE_FEED_TYPE_ALICE;
-console.log({
-  SUPABASE_URL,
-  SUPABASE_KEY,
-  ALICE_DISCORD_WEBHOOK_URL,
-  SUPABASE_FEED_TABLE_NAME,
-  SUPABASE_FEED_TYPE_ALICE
-});
 
 if (!SUPABASE_URL || !SUPABASE_KEY || !ALICE_DISCORD_WEBHOOK_URL || !SUPABASE_FEED_TABLE_NAME || !SUPABASE_FEED_TYPE_ALICE) {
   throw new Error("Missing required environment variables.");
@@ -48,21 +41,12 @@ async function handleError(error) {
 
   // messageとstackが文字列かどうかチェックする
   if (typeof error.message === 'string') {
-    console.log('error.message is a string:', error.message);
     error.message = error.message.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]');
-  } else {
-    console.error('error.message is not a string:', error.message);
   }
 
   if (typeof error.stack === 'string') {
-    console.log('error.stack is a string:', error.stack);
     error.stack = error.stack.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]');
-  } else {
-    console.error('error.stack is not a string:', error.stack);
   }
-
-  console.log(error.message);
-
   await fetch(ERROR_WEBHOOK_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -113,7 +97,6 @@ const checkAndUpdateFeeds = async (feeds) => {
 
       // 日付文字列の値をログに出力する
       const pubdateString = parsedFeed[0].pubdate;
-      console.log('pubdateString:', pubdateString);
 
       // 日付文字列を解析して適切なDateTimeオブジェクトを作成する関数
       const parseDate = (dateString) => {
@@ -124,7 +107,7 @@ const checkAndUpdateFeeds = async (feeds) => {
           try {
             dateTime = DateTime.fromISO(dateString).setZone(timezone);
           } catch (e) {
-            console.error('Invalid date format:', dateString);
+            handleError('Invalid date format:', e.message);
             return null;
           }
         }

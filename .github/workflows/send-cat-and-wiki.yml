@@ -2,7 +2,7 @@ name: Send Cat Image and Wiki Article
 
 on:
   schedule:
-    - cron: '*/30 * * * *' # 30分ごとに実行
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 jobs:

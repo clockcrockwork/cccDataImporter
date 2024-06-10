@@ -1,7 +1,7 @@
 {
   "name": "aliceBlogChecker",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
     "test": "jest"
@@ -9,6 +9,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.43.2",
     "axios": "^1.7.2",
+    "dotenv": "^16.4.5",
     "feedparser-promised": "^2.0.1",
     "html-to-text": "^9.0.5",
     "jsdom": "^24.0.0",

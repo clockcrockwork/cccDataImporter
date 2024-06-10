@@ -1,8 +1,17 @@
 {
   "name": "fetchRss",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "jest"
+  },
   "dependencies": {
-    "@supabase/supabase-js": "^2.43.2"
+    "@supabase/supabase-js": "^2.43.4",
+    "dotenv": "^16.4.5",
+    "jimp": "^0.22.12",
+    "node-fetch": "^3.3.2",
+    "rss-parser": "^3.13.0"
   }
 }
