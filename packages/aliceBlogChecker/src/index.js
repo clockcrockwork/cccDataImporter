@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 
 if (!process.env.GITHUB_ACTIONS) {
-  require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+  require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
 }
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
