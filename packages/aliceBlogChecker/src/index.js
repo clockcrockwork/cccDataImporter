@@ -4,7 +4,7 @@ const feedparser = require('feedparser-promised');
 const htmlToText = require('html-to-text');
 const { JSDOM } = require('jsdom');
 const { DateTime } = require('luxon');
-require('dotenv').config({ path: '../../../.env' });
+require('dotenv').config({ path: '../../.env' });
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
