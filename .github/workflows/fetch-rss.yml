@@ -1,31 +1,39 @@
 name: Fetch RSS Feeds
 
 on:
-  schedule:
-    - cron: '*/5 * * * *' # 5分ごとに実行
+  # schedule:
+  #   - cron: '*/5 * * * *' # 5分ごとに実行
   workflow_dispatch:
 
 jobs:
-  fetch:
+  fetch-rss-feeds:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+    - name: Checkout repository
+      uses: actions/checkout@v2
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '20'
 
-      - name: Install dependencies
-        run: yarn install
-
-      - name: Run RSS fetch script
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          ERROR_WEBHOOK_URL: ${{ secrets.ERROR_WEBHOOK_URL }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          GITHUB_REPO: ${{ secrets.GITHUB_REPO }}
-          FEED_PARENT_WEBHOOK_URL: ${{ secrets.FEED_PARENT_WEBHOOK_URL }}
-        run: node workspaces/fetchRss/index.js
+    - name: Set up environment variables
+      run: |
+        echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> $GITHUB_ENV
+        echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> $GITHUB_ENV
+        echo "SUPABASE_FEED_TABLE_NAME=${{ secrets.SUPABASE_FEED_TABLE_NAME }}" >> $GITHUB_ENV
+        echo "SUPABASE_FEED_TYPE_X=${{ secrets.SUPABASE_FEED_TYPE_X }}" >> $GITHUB_ENV
+        echo "SUPABASE_STORAGE_BUCKET_NAME=${{ secrets.SUPABASE_STORAGE_BUCKET_NAME }}" >> $GITHUB_ENV
+        echo "SUPABASE_STORAGE_FOLDER_NAME=${{ secrets.SUPABASE_STORAGE_FOLDER_NAME }}" >> $GITHUB_ENV
+        echo "ERROR_WEBHOOK_URL=${{ secrets.ERROR_WEBHOOK_URL }}" >> $GITHUB_ENV
+    
+    - name: Install dependencies
+      run: |
+        yarn install
+      working-directory: packages/fetchRss
+    
+    - name: Run Fetch RSS Feeds
+      run: |
+        node src/index.js
+      working-directory: packages/fetchRss
