@@ -2,7 +2,7 @@ name: Alice Blog Checker
 
 on:
   # schedule:
-  #   - cron: '*/30 * * * *' # 30分ごとに実行
+  #   - cron: '30 * * * *' # 30分に実行
   workflow_dispatch:
 
 jobs:
@@ -10,24 +10,41 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-          
-      - name: Install dependencies
-        run: |
-          npm install
-        working-directory: packages/aliceBlogChecker
+    - name: Checkout repository
+      uses: actions/checkout@v2
 
-      - name: Run Alice Blog Checker
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          ALICE_DISCORD_WEBHOOK_URL: ${{ secrets.ALICE_DISCORD_WEBHOOK_URL }}
-          ERROR_WEBHOOK_URL: ${{ secrets.ERROR_WEBHOOK_URL }}
-        run: |
-          node src/index.js
-        working-directory: packages/aliceBlogChecker
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '20'
+
+    - name: Set up environment variables
+      run: |
+        echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> $GITHUB_ENV
+        echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> $GITHUB_ENV
+        echo "ALICE_DISCORD_WEBHOOK_URL=${{ secrets.ALICE_DISCORD_WEBHOOK_URL }}" >> $GITHUB_ENV
+        echo "SUPABASE_FEED_TABLE_NAME=${{ secrets.SUPABASE_FEED_TABLE_NAME }}" >> $GITHUB_ENV
+        echo "SUPABASE_FEED_TYPE_ALICE=${{ secrets.SUPABASE_FEED_TYPE_ALICE }}" >> $GITHUB_ENV
+        echo "ERROR_WEBHOOK_URL=${{ secrets.ERROR_WEBHOOK_URL }}" >> $GITHUB_ENV
+        echo "GH_TOKEN=${{ secrets.GH_TOKEN }}" >> $GITHUB_ENV
+        echo "GITHUB_REPO=${{ secrets.GITHUB_REPO }}" >> $GITHUB_ENV
+
+    - name: Install dependencies
+      run: |
+        yarn install
+      working-directory: packages/aliceBlogChecker
+
+    - name: Run Alice Blog Checker
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        ALICE_DISCORD_WEBHOOK_URL: ${{ secrets.ALICE_DISCORD_WEBHOOK_URL }}
+        SUPABASE_FEED_TABLE_NAME: ${{ secrets.SUPABASE_FEED_TABLE_NAME }}
+        SUPABASE_FEED_TYPE_ALICE: ${{ secrets.SUPABASE_FEED_TYPE_ALICE }}
+        ERROR_WEBHOOK_URL: ${{ secrets.ERROR_WEBHOOK_URL }}
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        GITHUB_REPO: ${{ secrets.GITHUB_REPO }}
+      run: |
+        node src/index.js
+      working-directory: packages/aliceBlogChecker
