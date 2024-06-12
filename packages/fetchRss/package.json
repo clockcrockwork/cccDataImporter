@@ -10,6 +10,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.43.4",
     "dotenv": "^16.4.5",
+    "he": "^1.2.0",
     "jimp": "^0.22.12",
     "node-fetch": "^3.3.2",
     "rss-parser": "^3.13.0"

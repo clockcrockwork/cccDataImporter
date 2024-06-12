@@ -1,5 +1,4 @@
 const { createClient } = require('@supabase/supabase-js');
-const axios = require('axios');
 const feedparser = require('feedparser-promised');
 const htmlToText = require('html-to-text');
 const { JSDOM } = require('jsdom');
@@ -52,6 +51,8 @@ async function handleError(error) {
   if (typeof error.stack === 'string') {
     error.stack = error.stack.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]');
   }
+
+  console.log('Error:', error.message);
   await fetch(ERROR_WEBHOOK_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -83,7 +84,6 @@ const fetchFeeds = async () => {
       .from(SUPABASE_FEED_TABLE_NAME)
       .select('*')
       .eq('feed_type', SUPABASE_FEED_TYPE_ALICE);
-
     if (error) throw error;
     return data;
   } catch (error) {
@@ -99,10 +99,9 @@ const checkAndUpdateFeeds = async (feeds) => {
     const accessToken = await authenticateUser();
     for (const feed of feeds) {
       const parsedFeed = await feedparser.parse({ uri: feed.url });
-
       // 日付文字列の値をログに出力する
       const pubdateString = parsedFeed[0].pubdate;
-
+      
       // 日付文字列を解析して適切なDateTimeオブジェクトを作成する関数
       const parseDate = (dateString) => {
         let dateTime;
@@ -118,16 +117,13 @@ const checkAndUpdateFeeds = async (feeds) => {
         }
         return dateTime;
       };
-
       const latestPubdate = parseDate(pubdateString);
       if (!latestPubdate) {
         throw new Error(`Invalid date format: ${pubdateString}`);
       }
       const lastRetrieved = feed.last_retrieved ? DateTime.fromISO(feed.last_retrieved).setZone(timezone) : null;
-
       if (!lastRetrieved || latestPubdate > lastRetrieved) {
         const latestPubdateUtc = latestPubdate.setZone('UTC').toISO();
-
         const { data, error } = await supabase
           .from(SUPABASE_FEED_TABLE_NAME)
           .upsert({
@@ -139,7 +135,7 @@ const checkAndUpdateFeeds = async (feeds) => {
             hook_type: feed.hook_type,
             notes: feed.notes,
             last_retrieved: latestPubdateUtc
-          });
+          }, { onConflict: 'id' });
 
         if (error) throw error;
         updatesFound = true;
@@ -194,13 +190,16 @@ const postToDiscord = async (feed, entries, lastRetrieved = null) => {
       footer: { text: feed.name },
       image: { url: imageUrl }
     };
-
     try {
-      await axios.post(feed.webhook, {
-        embeds: [embed]
-      }, {
-        headers: { 'Content-Type': 'application/json' }
+      const response = await fetch(feed.webhook, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ embeds: [embed] })
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to send message: ${response.status}`);
+      }
     } catch (error) {
       await handleError(error);
     }
@@ -209,27 +208,29 @@ const postToDiscord = async (feed, entries, lastRetrieved = null) => {
 
 const postUnsplashImageToDiscord = async (webhook) => {
   try {
-    const response = await axios.get('https://source.unsplash.com/random?alice-in-wonderland');
-    if (response.status !== 200) throw new Error(`Failed to fetch Unsplash image: ${response.status}`);
+    const response = await fetch('https://source.unsplash.com/random?alice-in-wonderland');
 
+    if (!response.ok) {
+      throw new Error(`Failed to fetch Unsplash image: ${response.status}`);
+    }
     const embed = {
-      image: { url: response.request.res.responseUrl },
+      image: { url: response.url },
       footer: { text: 'Image Source: Unsplash' }
     };
-
-    const discordResponse = await axios.post(webhook, {
-      embeds: [embed]
-    }, {
-      headers: { 'Content-Type': 'application/json' }
+    const discordResponse = await fetch(webhook, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ embeds: [embed] })
     });
 
-    if (discordResponse.status !== 204) {
+    if (!discordResponse.ok) {
       throw new Error(`Failed to send message: ${discordResponse.status}`);
     }
   } catch (error) {
     await handleError(error);
   }
 };
+
 
 (async () => {
   const feeds = await fetchFeeds();

@@ -2,9 +2,12 @@ import { createClient } from '@supabase/supabase-js';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import Parser from 'rss-parser';
-import fs from 'fs';
+import { DateTime } from 'luxon';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { readFileSync, unlinkSync } from 'fs';
+import Jimp from 'jimp';
+import he from 'he';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,6 +15,8 @@ const __dirname = path.dirname(__filename);
 if (!process.env.GITHUB_ACTIONS) {
   dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 }
+
+const timezone = 'Asia/Tokyo';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
@@ -41,7 +46,9 @@ async function getRssFeeds() {
         throw error;
     }
 
-    return data;
+    // return data;
+    // test：dataから1つだけ取得
+    return [data[0]];
 }
 
 function createErrorArray() {
@@ -55,7 +62,7 @@ function createErrorArray() {
 
 async function checkForNewArticles(feedUrl, lastRetrieved) {
     const feed = await parser.parseURL(feedUrl);
-    const newArticles = feed.items.filter(item => new Date(item.pubDate) > new Date(lastRetrieved));
+    const newArticles = feed.items.filter(item => parseDate(item.pubDate) > parseDate(lastRetrieved));
 
     return newArticles;
 }
@@ -75,48 +82,58 @@ async function notifyDiscord(webhookUrl, articles, webhookType, threadId = null)
 
     await Promise.all(requests);
 }
-
+  
 async function processImage(imageUrl, imageName) {
-    const image = await Jimp.read(imageUrl);
-    const tempImagePath = `/tmp/${imageName}.png`;
+    const decodedUrl = he.decode(imageUrl);
+    const image = await Jimp.read(decodedUrl);
+    const contentType = 'image/png';
 
-    await image.writeAsync(tempImagePath);
+    const buffer = await image.getBufferAsync(Jimp.MIME_PNG);
+    console.log('Uploading image:', imageName);
 
     const { error } = await supabase.storage
         .from(SUPABASE_STORAGE_BUCKET_NAME)
-        .upload(`${SUPABASE_STORAGE_FOLDER_NAME}/${imageName}.png`, readFileSync(tempImagePath), {
+        .upload(`${SUPABASE_STORAGE_FOLDER_NAME}/${imageName}.png`, buffer, {
             cacheControl: '31536000',
-            upsert: true
+            upsert: true,
+            contentType: contentType
         });
-
-    unlinkSync(tempImagePath);
 
     if (error) {
         console.error('Error uploading image:', error);
         throw error;
     }
 }
+  
 
 async function processFeed(feed, errors) {
     try {
-        const newArticles = await checkForNewArticles(feed.url, feed['last-retrieved']);
-
+        const lastRetrieved = feed.last_retrieved ? DateTime.fromISO(feed.last_retrieved).setZone(timezone) : null;
+        console.log('lastRetrieved:', lastRetrieved);
+        const newArticles = await checkForNewArticles(feed.url, lastRetrieved);
         if (newArticles.length === 0) return { feedId: feed.id, updates: [], notifications: [] };
 
         const latestArticle = newArticles.reduce((latest, article) => 
-            new Date(article.pubDate) > new Date(latest.pubDate) ? article : latest, newArticles[0]);
+            parseDate(article.pubDate) > parseDate(latest.pubDate) ? article : latest, newArticles[0]);
+        
+        console.log('latestArticle:', latestArticle);
 
-        if (feed['webhook-type'] === 'thread') {
+        if (feed['hook_type'] === 'thread-normal') {
             const imageUrl = latestArticle.enclosure?.url || latestArticle.content?.match(/<img[^>]+src="([^">]+)"/)?.[1];
+            console.log('imageUrl:', imageUrl);
             if (imageUrl) {
                 await processImage(imageUrl, feed.id);
             }
+        }
+        else
+        {
+            console.log('hook_type:', feed['hook_type']);
         }
 
         return {
             feedId: feed.id,
             updates: newArticles.map(article => ({ id: feed.id, 'last-retrieved': article.pubDate })),
-            notifications: newArticles.map(article => ({ webhookUrl: feed['webhook-url'], article, webhookType: feed['webhook-type'], threadId: feed.id }))
+            notifications: newArticles.map(article => ({ webhookUrl: feed['webhook-url'], article, webhookType: feed['hook_type'], threadId: feed.id }))
         };
     } catch (error) {
         errors.addError(error);
@@ -138,11 +155,39 @@ async function handleError(errors) {
         });
     }
 }
-
+const authenticateUser = async () => {
+    try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+        email: process.env.SUPABASE_EMAIL,
+        password: process.env.SUPABASE_PASSWORD
+        });
+        if (error) throw error;
+        return data.session.access_token;
+    } catch (error) {
+        await handleError(`Error authenticating user: ${error.message}`);
+        throw error;
+    }
+};
+const parseDate = (dateString) => {
+    let dateTime;
+    try {
+        dateTime = DateTime.fromRFC2822(dateString).setZone(timezone);
+    } catch (e) {
+        try {
+        dateTime = DateTime.fromISO(dateString).setZone(timezone);
+        } catch (e) {
+        handleError('Invalid date format:', e.message);
+        return null;
+        }
+    }
+    return dateTime;
+};
 async function main() {
     const errors = createErrorArray();
 
     try {
+        const accessToken = await authenticateUser();
+        console.log('accessToken:', accessToken);
         const feeds = await getRssFeeds();
         const results = await Promise.allSettled(feeds.map(feed => processFeed(feed, errors)));
 
@@ -152,7 +197,7 @@ async function main() {
         const notifications = successfulResults.flatMap(result => result.notifications);
 
         if (updates.length > 0) {
-            await supabase.from(SUPABASE_FEED_TABLE_NAME).upsert(updates);
+            await supabase.from(SUPABASE_FEED_TABLE_NAME).upsert(updates, { onConflict: 'id' });
         }
 
         if (notifications.length > 0) {
@@ -166,13 +211,12 @@ async function main() {
                 await notifyDiscord(webhookUrl, articles.map(({ article }) => article), articles[0].webhookType, articles[0].threadId);
             }
         }
-
-        console.log('RSS Fetch completed');
     } catch (error) {
         errors.addError(error);
     }
-
-    await handleError(errors.getErrors());
+    finally {
+        await handleError(errors.getErrors());
+    }
 }
 
 main();
