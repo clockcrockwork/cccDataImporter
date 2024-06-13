@@ -25,7 +25,7 @@ const SUPABASE_FEED_TYPE_X = process.env.SUPABASE_FEED_TYPE_X;
 const SUPABASE_STORAGE_BUCKET_NAME = process.env.SUPABASE_STORAGE_BUCKET_NAME;
 const SUPABASE_STORAGE_FOLDER_NAME = process.env.SUPABASE_STORAGE_FOLDER_NAME || '';
 const ERROR_WEBHOOK_URL = process.env.ERROR_WEBHOOK_URL;
-
+const FEED_PARENT_WEBHOOK_URL = process.env.FEED_PARENT_WEBHOOK_URL;
 if (!SUPABASE_URL || !SUPABASE_KEY || !SUPABASE_FEED_TABLE_NAME || !SUPABASE_FEED_TYPE_X || !SUPABASE_STORAGE_BUCKET_NAME) {
     throw new Error("Missing required environment variables.");
 }
@@ -67,19 +67,35 @@ async function checkForNewArticles(feedUrl, lastRetrieved) {
     return newArticles;
 }
 
-async function notifyDiscord(webhookUrl, articles, webhookType, threadId = null) {
-    const payloads = articles.map(article => ({
-        content: article.link
-    }));
+async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
+    const payloads = articles.map(article => {
+        if (feedType === SUPABASE_FEED_TYPE_X) {
+            return {
+                content: article.link
+            };
+        } else {
+            return {
+                embeds: [{
+                    title: article.title,
+                    description: article.contentSnippet,
+                    url: article.link,
+                    timestamp: new Date(article.pubDate).toISOString(),
+                }]
+            };
+        }
+    });
 
-    const requests = payloads.map(payload =>
-        fetch(webhookUrl, {
+    const requests = payloads.map(payload => {
+        const url = webhookType === 'thread-normal'
+            ? `${FEED_PARENT_WEBHOOK_URL}/?thread_id=${webhookUrl}`
+            : webhookUrl;
+
+        return fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
-        })
-    );
-
+        });
+    });
     await Promise.all(requests);
 }
   
@@ -122,18 +138,14 @@ async function processFeed(feed, errors) {
             const imageUrl = latestArticle.enclosure?.url || latestArticle.content?.match(/<img[^>]+src="([^">]+)"/)?.[1];
             console.log('imageUrl:', imageUrl);
             if (imageUrl) {
-                await processImage(imageUrl, feed.id);
+                await processImage(imageUrl, feed['webhook']);
             }
-        }
-        else
-        {
-            console.log('hook_type:', feed['hook_type']);
         }
 
         return {
             feedId: feed.id,
             updates: newArticles.map(article => ({ id: feed.id, 'last-retrieved': article.pubDate })),
-            notifications: newArticles.map(article => ({ webhookUrl: feed['webhook-url'], article, webhookType: feed['hook_type'], threadId: feed.id }))
+            notifications: newArticles.map(article => ({ webhookUrl: feed['webhook'], article, webhookType: feed['hook_type'], feedType: feed['feed_type'] }))
         };
     } catch (error) {
         errors.addError(error);
@@ -191,24 +203,30 @@ async function main() {
         const feeds = await getRssFeeds();
         const results = await Promise.allSettled(feeds.map(feed => processFeed(feed, errors)));
 
+        console.log('Results:', results);
+
         const successfulResults = results.filter(result => result.status === 'fulfilled').map(result => result.value);
 
         const updates = successfulResults.flatMap(result => result.updates);
         const notifications = successfulResults.flatMap(result => result.notifications);
 
         if (updates.length > 0) {
+            console.log('Updates:', updates);
             await supabase.from(SUPABASE_FEED_TABLE_NAME).upsert(updates, { onConflict: 'id' });
         }
 
         if (notifications.length > 0) {
-            const groupedNotifications = notifications.reduce((acc, { webhookUrl, article, webhookType, threadId }) => {
+            console.log('Notifications:', notifications);
+            const groupedNotifications = notifications.reduce((acc, { webhookUrl, article, webhookType, feedType }) => {
                 if (!acc[webhookUrl]) acc[webhookUrl] = [];
-                acc[webhookUrl].push({ article, webhookType, threadId });
+                acc[webhookUrl].push({ article, webhookType });
                 return acc;
             }, {});
+            
+            console.log('Grouped notifications:', groupedNotifications);
 
             for (const [webhookUrl, articles] of Object.entries(groupedNotifications)) {
-                await notifyDiscord(webhookUrl, articles.map(({ article }) => article), articles[0].webhookType, articles[0].threadId);
+                await notifyDiscord(webhookUrl, articles.map(({ article }) => article), articles[0].webhookType, articles[0].feedType);
             }
         }
     } catch (error) {
