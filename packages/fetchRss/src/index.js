@@ -39,8 +39,6 @@ async function getRssFeeds() {
         .select('*')
         .eq('feed_type', SUPABASE_FEED_TYPE_X);
 
-    console.log('RSS Feeds:', data);
-
     if (error) {
         console.error('Error fetching RSS feeds:', error);
         throw error;
@@ -105,7 +103,6 @@ async function processImage(imageUrl, imageName) {
     const contentType = 'image/png';
 
     const buffer = await image.getBufferAsync(Jimp.MIME_PNG);
-    console.log('Uploading image:', imageName);
 
     const { error } = await supabase.storage
         .from(SUPABASE_STORAGE_BUCKET_NAME)
@@ -116,7 +113,6 @@ async function processImage(imageUrl, imageName) {
         });
 
     if (error) {
-        console.error('Error uploading image:', error);
         throw error;
     }
 }
@@ -125,18 +121,15 @@ async function processImage(imageUrl, imageName) {
 async function processFeed(feed, errors) {
     try {
         const lastRetrieved = feed.last_retrieved ? DateTime.fromISO(feed.last_retrieved).setZone(timezone) : null;
-        console.log('lastRetrieved:', lastRetrieved);
+
         const newArticles = await checkForNewArticles(feed.url, lastRetrieved);
         if (newArticles.length === 0) return { feedId: feed.id, updates: [], notifications: [] };
 
         const latestArticle = newArticles.reduce((latest, article) => 
             parseDate(article.pubDate) > parseDate(latest.pubDate) ? article : latest, newArticles[0]);
         
-        console.log('latestArticle:', latestArticle);
-
         if (feed['hook_type'] === 'thread-normal') {
             const imageUrl = latestArticle.enclosure?.url || latestArticle.content?.match(/<img[^>]+src="([^">]+)"/)?.[1];
-            console.log('imageUrl:', imageUrl);
             if (imageUrl) {
                 await processImage(imageUrl, feed['webhook']);
             }
@@ -144,7 +137,7 @@ async function processFeed(feed, errors) {
 
         return {
             feedId: feed.id,
-            updates: newArticles.map(article => ({ id: feed.id, 'last-retrieved': article.pubDate })),
+            updates: newArticles.map(article => ({ id: feed.id, 'last_retrieved': article.pubDate })),
             notifications: newArticles.map(article => ({ webhookUrl: feed['webhook'], article, webhookType: feed['hook_type'], feedType: feed['feed_type'] }))
         };
     } catch (error) {
@@ -170,8 +163,8 @@ async function handleError(errors) {
 const authenticateUser = async () => {
     try {
         const { data, error } = await supabase.auth.signInWithPassword({
-        email: process.env.SUPABASE_EMAIL,
-        password: process.env.SUPABASE_PASSWORD
+            email: process.env.SUPABASE_EMAIL,
+            password: process.env.SUPABASE_PASSWORD
         });
         if (error) throw error;
         return data.session.access_token;
@@ -186,10 +179,10 @@ const parseDate = (dateString) => {
         dateTime = DateTime.fromRFC2822(dateString).setZone(timezone);
     } catch (e) {
         try {
-        dateTime = DateTime.fromISO(dateString).setZone(timezone);
+            dateTime = DateTime.fromISO(dateString).setZone(timezone);
         } catch (e) {
-        handleError('Invalid date format:', e.message);
-        return null;
+            handleError('Invalid date format:', e.message);
+            return null;
         }
     }
     return dateTime;
@@ -199,32 +192,42 @@ async function main() {
 
     try {
         const accessToken = await authenticateUser();
-        console.log('accessToken:', accessToken);
         const feeds = await getRssFeeds();
         const results = await Promise.allSettled(feeds.map(feed => processFeed(feed, errors)));
-
-        console.log('Results:', results);
 
         const successfulResults = results.filter(result => result.status === 'fulfilled').map(result => result.value);
 
         const updates = successfulResults.flatMap(result => result.updates);
         const notifications = successfulResults.flatMap(result => result.notifications);
-
+        console.log('Updates:', updates);
+        // 最新の日付で更新
         if (updates.length > 0) {
-            console.log('Updates:', updates);
-            await supabase.from(SUPABASE_FEED_TABLE_NAME).upsert(updates, { onConflict: 'id' });
+            const latestUpdates = updates.reduce((acc, update) => {
+                const existing = acc.find(item => item.id === update.id);
+                if (existing) {
+                    if (DateTime.fromISO(update['last-retrieved']) > DateTime.fromISO(existing['last-retrieved'])) {
+                        existing['last-retrieved'] = update['last-retrieved'];
+                    }
+                } else {
+                    acc.push(update);
+                }
+                return acc;
+            }, []);
+            console.log('Latest updates:', latestUpdates);
+            const { error } = await supabase.from(SUPABASE_FEED_TABLE_NAME).upsert(latestUpdates, { onConflict: 'id' }).select();
+
+            if (error) {
+                throw error;
+            }
         }
 
         if (notifications.length > 0) {
-            console.log('Notifications:', notifications);
             const groupedNotifications = notifications.reduce((acc, { webhookUrl, article, webhookType, feedType }) => {
                 if (!acc[webhookUrl]) acc[webhookUrl] = [];
                 acc[webhookUrl].push({ article, webhookType });
                 return acc;
             }, {});
             
-            console.log('Grouped notifications:', groupedNotifications);
-
             for (const [webhookUrl, articles] of Object.entries(groupedNotifications)) {
                 await notifyDiscord(webhookUrl, articles.map(({ article }) => article), articles[0].webhookType, articles[0].feedType);
             }

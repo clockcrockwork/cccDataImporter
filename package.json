@@ -25,7 +25,8 @@
     "test:getPopularProducts": "yarn workspace getPopularProducts test --maxWorkers=49%",
     "test:getPopularRepositories": "yarn workspace getPopularRepositories test --maxWorkers=49%",
     "test:notifyDiscord": "yarn workspace notifyDiscord test --maxWorkers=49%",
-    "upgrade": "yarn workspaces foreach run upgrade --latest --all && yarn install"
+    "upgrade": "yarn workspaces foreach run upgrade-interactive --latest && yarn dedupe && yarn install",
+    "upgrade-security": "yarn workspaces foreach run upgrade-interactive --latest --pattern '\\bvulnerable\\b' && yarn dedupe && yarn install"
   },
   "devDependencies": {
     "lerna": "^8.1.3"
