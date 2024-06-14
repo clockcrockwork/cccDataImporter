@@ -44,9 +44,7 @@ async function getRssFeeds() {
         throw error;
     }
 
-    // return data;
-    // test：dataから1つだけ取得
-    return [data[0]];
+    return data;
 }
 
 function createErrorArray() {
@@ -204,12 +202,15 @@ async function main() {
         if (updates.length > 0) {
             const latestUpdates = updates.reduce((acc, update) => {
                 const existing = acc.find(item => item.id === update.id);
+                const fullFeedData = feeds.find(feed => feed.id === update.id);
+
                 if (existing) {
-                    if (DateTime.fromISO(update['last-retrieved']) > DateTime.fromISO(existing['last-retrieved'])) {
-                        existing['last-retrieved'] = update['last-retrieved'];
+                    if (DateTime.fromISO(update['last_retrieved']) > DateTime.fromISO(existing['last_retrieved'])) {
+                        existing['last_retrieved'] = update['last_retrieved'];
                     }
                 } else {
-                    acc.push(update);
+                    // fullFeedDataから必要なフィールドをすべて含める
+                    acc.push({ ...fullFeedData, 'last_retrieved': update['last_retrieved'] });
                 }
                 return acc;
             }, []);
