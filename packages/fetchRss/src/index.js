@@ -209,7 +209,6 @@ async function main() {
                         existing['last_retrieved'] = update['last_retrieved'];
                     }
                 } else {
-                    // fullFeedDataから必要なフィールドをすべて含める
                     acc.push({ ...fullFeedData, 'last_retrieved': update['last_retrieved'] });
                 }
                 return acc;
