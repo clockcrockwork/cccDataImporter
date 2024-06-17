@@ -5,7 +5,6 @@ import Parser from 'rss-parser';
 import { DateTime } from 'luxon';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { readFileSync, unlinkSync } from 'fs';
 import Jimp from 'jimp';
 import he from 'he';
 
@@ -92,7 +91,7 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
             body: JSON.stringify(payload)
         });
     });
-    await Promise.all(requests);
+    await Promise.allSettled(requests);
 }
   
 async function processImage(imageUrl, imageName) {
@@ -221,15 +220,21 @@ async function main() {
             }
         }
 
+        console.log('Notifications:', notifications);
+
         if (notifications.length > 0) {
             const groupedNotifications = notifications.reduce((acc, { webhookUrl, article, webhookType, feedType }) => {
                 if (!acc[webhookUrl]) acc[webhookUrl] = [];
-                acc[webhookUrl].push({ article, webhookType });
+                acc[webhookUrl].push({ article, webhookType, feedType });
                 return acc;
             }, {});
+
+            console.log('Grouped notifications:', groupedNotifications);
+            const notificationResults = await Promise.allSettled(Object.entries(groupedNotifications).map(([webhookUrl, articles]) => notifyDiscord(webhookUrl, articles.map(({ article }) => article), articles[0].webhookType, articles[0].feedType)));
             
-            for (const [webhookUrl, articles] of Object.entries(groupedNotifications)) {
-                await notifyDiscord(webhookUrl, articles.map(({ article }) => article), articles[0].webhookType, articles[0].feedType);
+            const failedNotifications = notificationResults.filter(result => result.status === 'rejected').map(result => result.reason);
+            if (failedNotifications.length > 0) {
+                throw new Error(`Failed notifications: ${failedNotifications.map(err => err.message).join('\n')}`);
             }
         }
     } catch (error) {
