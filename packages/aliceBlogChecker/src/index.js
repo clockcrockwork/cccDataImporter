@@ -111,7 +111,7 @@ const checkAndUpdateFeeds = async (feeds) => {
           try {
             dateTime = DateTime.fromISO(dateString).setZone(timezone);
           } catch (e) {
-            handleError('Invalid date format:', e.message);
+            handleError('Invalid date format:' + e.message);
             return null;
           }
         }
@@ -144,7 +144,7 @@ const checkAndUpdateFeeds = async (feeds) => {
     }
 
     if (!updatesFound) {
-      await postUnsplashImageToDiscord(ALICE_DISCORD_WEBHOOK_URL);
+      await postRandomImageToDiscord(ALICE_DISCORD_WEBHOOK_URL);
     }
   } catch (error) {
     await handleError(error);
@@ -206,17 +206,52 @@ const postToDiscord = async (feed, entries, lastRetrieved = null) => {
   }
 };
 
-const postUnsplashImageToDiscord = async (webhook) => {
-  try {
-    const response = await fetch('https://source.unsplash.com/random?alice-in-wonderland');
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch Unsplash image: ${response.status}`);
+const postRandomImageToDiscord = async (webhook) => {
+  const PIXABAY_API_KEY = process.env.PIXABAY_API_KEY;
+  const FLICKR_API_KEY = process.env.FLICKR_API_KEY;
+  
+  const sources = [
+    {
+      url: (keyword) => {
+        const encodedKeyword = encodeURIComponent(keyword);
+        return `https://pixabay.com/api/?key=${PIXABAY_API_KEY}&q=${keyword}&image_type=all&safesearch=true&per_page=3&page=${Math.floor(Math.random() * 100) + 1}`;
+      },
+      parseResponse: (data) => {
+        const images = data.hits;
+        if (images.length === 0) throw new Error('No images found');
+        const randomImage = images[Math.floor(Math.random() * images.length)];
+        return randomImage.webformatURL;
+      },
+      footer: 'Image Source: Pixabay'
+    },
+    {
+      url: (keyword) => {
+        const encodedKeyword = encodeURIComponent(keyword);
+        return `https://www.flickr.com/services/rest/?method=flickr.photos.search&api_key=${FLICKR_API_KEY}&tags=${keyword}&format=json&nojsoncallback=1&per_page=${Math.floor(Math.random() * 48) + 3}&page=${Math.floor(Math.random() * 100) + 1}`;
+      },
+      parseResponse: (data) => {
+        const images = data.photos.photo;
+        if (images.length === 0) throw new Error('No images found');
+        const randomImage = images[Math.floor(Math.random() * images.length)];
+        return `https://live.staticflickr.com/${randomImage.server}/${randomImage.id}_${randomImage.secret}.jpg`;
+      },
+      footer: 'Image Source: Flickr'
     }
+  ];
+
+  // どちらを使うかランダムに選択
+  const source = sources[Math.floor(Math.random() * sources.length)];
+
+  try {
+    const response = await fetch(source.url('alice in wonderland'));
+    const data = await response.json();
+    const imageUrl = source.parseResponse(data);
+
     const embed = {
-      image: { url: response.url },
-      footer: { text: 'Image Source: Unsplash' }
+      image: { url: imageUrl },
+      footer: { text: source.footer }
     };
+
     const discordResponse = await fetch(webhook, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -227,10 +262,9 @@ const postUnsplashImageToDiscord = async (webhook) => {
       throw new Error(`Failed to send message: ${discordResponse.status}`);
     }
   } catch (error) {
-    await handleError(error);
+    handleError(error);
   }
 };
-
 
 (async () => {
   const feeds = await fetchFeeds();
