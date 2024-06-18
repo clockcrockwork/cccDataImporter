@@ -79,11 +79,15 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
             };
         }
     });
+    
+    console.table(payloads);
 
     const requests = payloads.map(payload => {
         const url = webhookType === 'thread-normal'
-            ? `${FEED_PARENT_WEBHOOK_URL}/?thread_id=${webhookUrl}`
+            ? `${FEED_PARENT_WEBHOOK_URL}?thread_id=${webhookUrl}`
             : webhookUrl;
+        
+        console.log('Sending request to:', url);
 
         return fetch(url, {
             method: 'POST',

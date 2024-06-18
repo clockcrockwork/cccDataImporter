@@ -55,7 +55,7 @@ def get_image_url(api_option):
                 raise Exception(f"Failed to fetch Unsplash image: {response.status_code}, {response.text}")
 
         elif api_option["name"] == "pixabay":
-            page = random.randint(1, 1000)
+            page = random.randint(1, 200)
             response = requests.get(api_option["url"] + str(page))
             if response.status_code == 200:
                 image_url = random.choice(response.json()['hits'])['webformatURL']
