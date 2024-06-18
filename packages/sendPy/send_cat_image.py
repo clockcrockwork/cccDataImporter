@@ -78,7 +78,10 @@ def get_image_url(api_option):
         return None, str(error)
 
 def fetch_image_and_send_to_discord():
-    source = random.choice(api_options)
+    # source = random.choice(api_options)
+    # テストの為、flickr固定
+    source = api_options[3]
+    print(f"Fetching image from {source['name']}...")
     image_url, footer_or_error = get_image_url(source)
     if image_url:
         embed = {
