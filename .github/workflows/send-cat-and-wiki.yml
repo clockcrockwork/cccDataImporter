@@ -29,6 +29,8 @@ jobs:
           CAT_DISCORD_WEBHOOK_URL: ${{ secrets.CAT_DISCORD_WEBHOOK_URL }}
           ERROR_WEBHOOK_URL: ${{ secrets.ERROR_WEBHOOK_URL }}
           CAT_API_KEY: ${{ secrets.CAT_API_KEY }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          FLICKR_API_KEY: ${{ secrets.FLICKR_API_KEY }}
         run: |
           cd packages/sendPy
           source venv/bin/activate
