@@ -214,7 +214,7 @@ const postRandomImageToDiscord = async (webhook) => {
     {
       url: (keyword) => {
         const encodedKeyword = encodeURIComponent(keyword);
-        return `https://pixabay.com/api/?key=${PIXABAY_API_KEY}&q=${keyword}&image_type=all&safesearch=true&per_page=3&page=${Math.floor(Math.random() * 100) + 1}`;
+        return `https://pixabay.com/api/?key=${PIXABAY_API_KEY}&q=${encodedKeyword}&image_type=all&pretty=true&safesearch=true&per_page=3&page=${Math.floor(Math.random() * 200) + 1}`;
       },
       parseResponse: (data) => {
         const images = data.hits;
@@ -227,7 +227,7 @@ const postRandomImageToDiscord = async (webhook) => {
     {
       url: (keyword) => {
         const encodedKeyword = encodeURIComponent(keyword);
-        return `https://www.flickr.com/services/rest/?method=flickr.photos.search&api_key=${FLICKR_API_KEY}&tags=${keyword}&format=json&nojsoncallback=1&per_page=${Math.floor(Math.random() * 48) + 3}&page=${Math.floor(Math.random() * 100) + 1}`;
+        return `https://www.flickr.com/services/rest/?method=flickr.photos.search&api_key=${FLICKR_API_KEY}&tags=${encodedKeyword}&format=json&nojsoncallback=1&per_page=1&page=${Math.floor(Math.random() * 1000) + 1}`;
       },
       parseResponse: (data) => {
         const images = data.photos.photo;
@@ -242,11 +242,15 @@ const postRandomImageToDiscord = async (webhook) => {
   // どちらを使うかランダムに選択
   const source = sources[Math.floor(Math.random() * sources.length)];
 
+  console.log('Fetching random image...' + source.footer);
+
   try {
     const response = await fetch(source.url('alice in wonderland'));
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.statusText}`);
+    }
     const data = await response.json();
     const imageUrl = source.parseResponse(data);
-
     const embed = {
       image: { url: imageUrl },
       footer: { text: source.footer }
