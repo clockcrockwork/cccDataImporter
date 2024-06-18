@@ -77,10 +77,12 @@ def get_image_url(api_option):
     except Exception as error:
         return None, str(error)
 
-def fetch_image_and_send_to_discord():
-    # source = random.choice(api_options)
-    # テストの為、flickr固定
-    source = api_options[3]
+def fetch_image_and_send_to_discord(api_options):
+    if not api_options:
+        send_error_to_discord("No API options available to fetch images.")
+        return
+
+    source = random.choice(api_options)
     print(f"Fetching image from {source['name']}...")
     image_url, footer_or_error = get_image_url(source)
     if image_url:
@@ -97,9 +99,6 @@ def fetch_image_and_send_to_discord():
             send_error_to_discord(f"Failed to send message: {response.status_code}, {response.text}")
     else:
         api_options.remove(source)
-        if api_options:
-            fetch_image_and_send_to_discord()
-        else:
-            send_error_to_discord(f"Failed to fetch image: {footer_or_error}")
-    
-fetch_image_and_send_to_discord()
+        fetch_image_and_send_to_discord(api_options)
+
+fetch_image_and_send_to_discord(api_options)
