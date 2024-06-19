@@ -27,7 +27,9 @@ jobs:
         echo "SUPABASE_STORAGE_BUCKET_NAME=${{ secrets.SUPABASE_STORAGE_BUCKET_NAME }}" >> $GITHUB_ENV
         echo "SUPABASE_STORAGE_FOLDER_NAME=${{ secrets.SUPABASE_STORAGE_FOLDER_NAME }}" >> $GITHUB_ENV
         echo "ERROR_WEBHOOK_URL=${{ secrets.ERROR_WEBHOOK_URL }}" >> $GITHUB_ENV
-    
+        echo "SUPABASE_EMAIL=${{ secrets.SUPABASE_EMAIL }}" >> $GITHUB_ENV
+        echo "SUPABASE_PASSWORD=${{ secrets.SUPABASE_PASSWORD }}" >> $GITHUB_ENV
+
     - name: Install dependencies
       run: |
         yarn install

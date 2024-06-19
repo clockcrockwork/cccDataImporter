@@ -29,6 +29,8 @@ jobs:
         echo "ERROR_WEBHOOK_URL=${{ secrets.ERROR_WEBHOOK_URL }}" >> $GITHUB_ENV
         echo "GH_TOKEN=${{ secrets.GH_TOKEN }}" >> $GITHUB_ENV
         echo "GITHUB_REPO=${{ secrets.GITHUB_REPO }}" >> $GITHUB_ENV
+        echo "SUPABASE_EMAIL=${{ secrets.SUPABASE_EMAIL }}" >> $GITHUB_ENV
+        echo "SUPABASE_PASSWORD=${{ secrets.SUPABASE_PASSWORD }}" >> $GITHUB_ENV
 
     - name: Install dependencies
       run: |
@@ -45,6 +47,8 @@ jobs:
         ERROR_WEBHOOK_URL: ${{ secrets.ERROR_WEBHOOK_URL }}
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
         GITHUB_REPO: ${{ secrets.GITHUB_REPO }}
+        SUPABASE_EMAIL: ${{ secrets.SUPABASE_EMAIL }}
+        SUPABASE_PASSWORD: ${{ secrets.SUPABASE_PASSWORD }}
       run: |
         node src/index.js
       working-directory: packages/aliceBlogChecker
