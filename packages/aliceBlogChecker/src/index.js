@@ -55,7 +55,7 @@ async function handleError(error) {
   await fetch(ERROR_WEBHOOK_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content: `Error: ${error.message}` })
+    body: JSON.stringify({ content: `【Alice Blog Check】Error: ${error.message}` })
   });
   // const sanitizedError = {
   //     message: error.message.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]'),
