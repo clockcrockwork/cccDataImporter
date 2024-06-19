@@ -39,7 +39,6 @@ async function getRssFeeds() {
         .eq('feed_type', SUPABASE_FEED_TYPE_X);
 
     if (error) {
-        console.error('Error fetching RSS feeds:', error);
         throw error;
     }
 
@@ -80,15 +79,11 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
         }
     });
     
-    console.table(payloads);
-
     const requests = payloads.map(payload => {
         const url = webhookType === 'thread-normal'
             ? `${FEED_PARENT_WEBHOOK_URL}?thread_id=${webhookUrl}`
             : webhookUrl;
         
-        console.log('Sending request to:', url);
-
         return fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -152,8 +147,6 @@ async function handleError(errors) {
     if (errors.length > 0) {
         const errorMessage = errors.map(err => err.message).join('\n');
 
-        console.error('Errors:', errorMessage);
-
         await fetch(ERROR_WEBHOOK_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -200,7 +193,7 @@ async function main() {
 
         const updates = successfulResults.flatMap(result => result.updates);
         const notifications = successfulResults.flatMap(result => result.notifications);
-        console.log('Updates:', updates);
+
         // 最新の日付で更新
         if (updates.length > 0) {
             const latestUpdates = updates.reduce((acc, update) => {
@@ -216,15 +209,12 @@ async function main() {
                 }
                 return acc;
             }, []);
-            console.log('Latest updates:', latestUpdates);
             const { error } = await supabase.from(SUPABASE_FEED_TABLE_NAME).upsert(latestUpdates, { onConflict: 'id' }).select();
 
             if (error) {
                 throw error;
             }
         }
-
-        console.log('Notifications:', notifications);
 
         if (notifications.length > 0) {
             const groupedNotifications = notifications.reduce((acc, { webhookUrl, article, webhookType, feedType }) => {
@@ -233,7 +223,6 @@ async function main() {
                 return acc;
             }, {});
 
-            console.log('Grouped notifications:', groupedNotifications);
             const notificationResults = await Promise.allSettled(Object.entries(groupedNotifications).map(([webhookUrl, articles]) => notifyDiscord(webhookUrl, articles.map(({ article }) => article), articles[0].webhookType, articles[0].feedType)));
             
             const failedNotifications = notificationResults.filter(result => result.status === 'rejected').map(result => result.reason);
