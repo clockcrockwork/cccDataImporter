@@ -31,6 +31,8 @@ jobs:
         echo "GITHUB_REPO=${{ secrets.GITHUB_REPO }}" >> $GITHUB_ENV
         echo "SUPABASE_EMAIL=${{ secrets.SUPABASE_EMAIL }}" >> $GITHUB_ENV
         echo "SUPABASE_PASSWORD=${{ secrets.SUPABASE_PASSWORD }}" >> $GITHUB_ENV
+        echo "PIXABAY_API_KEY=${{ secrets.PIXABAY_API_KEY }}" >> $GITHUB_ENV
+        echo "FLICKR_API_KEY=${{ secrets.FLICKR_API_KEY }}" >> $GITHUB_ENV
 
     - name: Install dependencies
       run: |
@@ -49,6 +51,8 @@ jobs:
         GITHUB_REPO: ${{ secrets.GITHUB_REPO }}
         SUPABASE_EMAIL: ${{ secrets.SUPABASE_EMAIL }}
         SUPABASE_PASSWORD: ${{ secrets.SUPABASE_PASSWORD }}
+        PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+        FLICKR_API_KEY: ${{ secrets.FLICKR_API_KEY }}
       run: |
         node src/index.js
       working-directory: packages/aliceBlogChecker
