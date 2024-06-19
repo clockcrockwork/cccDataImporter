@@ -150,7 +150,7 @@ async function handleError(errors) {
         await fetch(ERROR_WEBHOOK_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: `Errors occurred: ${errorMessage}` })
+            body: JSON.stringify({ content: `【fetch RSS】Errors occurred: ${errorMessage}` })
         });
     }
 }
