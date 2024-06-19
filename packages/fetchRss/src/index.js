@@ -146,7 +146,7 @@ async function processFeed(feed, errors) {
 async function handleError(errors) {
     if (errors.length > 0) {
         const errorMessage = errors.map(err => err.message).join('\n');
-
+        console.log(errorMessage);
         await fetch(ERROR_WEBHOOK_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
