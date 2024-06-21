@@ -32,7 +32,10 @@ jobs:
         echo "ERROR_WEBHOOK_URL=${{ secrets.ERROR_WEBHOOK_URL }}" >> $GITHUB_ENV
         echo "SUPABASE_EMAIL=${{ secrets.SUPABASE_EMAIL }}" >> $GITHUB_ENV
         echo "SUPABASE_PASSWORD=${{ secrets.SUPABASE_PASSWORD }}" >> $GITHUB_ENV
-
+        
+    - name: Add Sharp
+      run: yarn workspace fetchRss add sharp --ignore-engines
+      
     - name: Install dependencies
       run: |
         yarn install --network-concurrency 1
