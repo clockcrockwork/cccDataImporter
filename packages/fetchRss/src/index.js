@@ -1,12 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
-import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import Parser from 'rss-parser';
-import { DateTime } from 'luxon';
+import { parse, format, tzDate, isAfter } from "@formkit/tempo";
 import path from 'path';
 import { fileURLToPath } from 'url';
-import Jimp from 'jimp';
-import he from 'he';
+import sharp from 'sharp';
+import { decode } from 'html-entities';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,6 +15,7 @@ if (!process.env.GITHUB_ACTIONS) {
 }
 
 const timezone = 'Asia/Tokyo';
+const parser = new Parser();
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
@@ -30,7 +30,6 @@ if (!SUPABASE_URL || !SUPABASE_KEY || !SUPABASE_FEED_TABLE_NAME || !SUPABASE_FEE
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const parser = new Parser();
 
 async function getRssFeeds() {
     const { data, error } = await supabase
@@ -55,13 +54,14 @@ function createErrorArray() {
 }
 
 async function checkForNewArticles(feedUrl, lastRetrieved) {
+    console.log('Checking for new articles:', feedUrl);
     const feed = await parser.parseURL(feedUrl);
     const newArticles = feed.items.filter(item => parseDate(item.pubDate) > parseDate(lastRetrieved));
-
     return newArticles;
 }
 
 async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
+    console.log('Notifying Discord:', webhookUrl);
     const payloads = articles.map(article => {
         if (feedType === SUPABASE_FEED_TYPE_X) {
             return {
@@ -73,7 +73,7 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
                     title: article.title,
                     description: article.contentSnippet,
                     url: article.link,
-                    timestamp: new Date(article.pubDate).toISOString(),
+                    timestamp: format(tzDate(article.pubDate, 'UTC'), "yyyy-MM-dd'T'HH:mm:ssXXX", { timeZone: 'UTC' }),
                 }]
             };
         }
@@ -94,29 +94,42 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
 }
   
 async function processImage(imageUrl, imageName) {
-    const decodedUrl = he.decode(imageUrl);
-    const image = await Jimp.read(decodedUrl);
-    const contentType = 'image/png';
+    const decodedUrl = decode(imageUrl);
+    console.log('Decoded URL:', decodedUrl);
 
-    const buffer = await image.getBufferAsync(Jimp.MIME_PNG);
+    try {
+        // URLから画像をダウンロード
+        const response = await fetch(decodedUrl);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
 
-    const { error } = await supabase.storage
-        .from(SUPABASE_STORAGE_BUCKET_NAME)
-        .upload(`${SUPABASE_STORAGE_FOLDER_NAME}/${imageName}.png`, buffer, {
-            cacheControl: '31536000',
-            upsert: true,
-            contentType: contentType
-        });
+        // ダウンロードした画像をsharpで処理
+        const image = await sharp(buffer).toFormat('png').toBuffer();
+        const contentType = 'image/png';
 
-    if (error) {
+        const { error } = await supabase.storage
+            .from(SUPABASE_STORAGE_BUCKET_NAME)
+            .upload(`${SUPABASE_STORAGE_FOLDER_NAME}/${imageName}.png`, image, {
+                cacheControl: '31536000',
+                upsert: true,
+                contentType: contentType
+            });
+
+        if (error) {
+            throw error;
+        }
+    } catch (error) {
         throw error;
     }
 }
-  
 
 async function processFeed(feed, errors) {
+    console.log('Processing feed:', feed.url);
     try {
-        const lastRetrieved = feed.last_retrieved ? DateTime.fromISO(feed.last_retrieved).setZone(timezone) : null;
+        const lastRetrieved = feed.last_retrieved ? tzDate(feed.last_retrieved, timezone) : null;
 
         const newArticles = await checkForNewArticles(feed.url, lastRetrieved);
         if (newArticles.length === 0) return { feedId: feed.id, updates: [], notifications: [] };
@@ -163,54 +176,128 @@ const authenticateUser = async () => {
         if (error) throw error;
         return data.session.access_token;
     } catch (error) {
-        await handleError(`Error authenticating user: ${error.message}`);
         throw error;
     }
 };
 const parseDate = (dateString) => {
-    let dateTime;
     try {
-        dateTime = DateTime.fromRFC2822(dateString).setZone(timezone);
-    } catch (e) {
+        dateString = String(dateString);
+
+        // Remove parentheses and their contents
+        dateString = dateString.replace(/\s*\([^)]*\)/, '');
+        const formats = [
+            "EEE, dd MMM yyyy HH:mm:ss 'GMT'",
+            "yyyy-MM-dd HH:mm:ssXXX",
+            "ddd, DD MMM YYYY HH:mm:ss",
+            "EEE MMM dd yyyy HH:mm:ss 'GMT'XXX",
+            "EEE, dd MMM yyyy HH:mm:ss 'GMT'XXX",
+            "EEE MMM dd yyyy HH:mm:ss 'GMT'XXXXX"
+        ];
+
+        let parsedDate;
+        for (let formatString of formats) {
+            try {
+                parsedDate = parse(dateString, formatString, { timezone: "UTC" });
+                break;
+            } catch (error) {
+                continue;
+            }
+        }
+
+        if (!parsedDate) {
+            parsedDate = new Date(dateString);
+            if (isNaN(parsedDate.getTime())) {
+                throw new Error("Unsupported date format");
+            }
+        }
+
+        const localTime = tzDate(parsedDate, timezone);
+        return format(localTime, "yyyy-MM-dd HH:mm:ssXXX");
+    } catch (error) {
+        console.error('Invalid date format:', error.message);
+        return null;
+    }
+};
+const parseDateString = (dateString) => {
+    const formats = [
+        "EEE, dd MMM yyyy HH:mm:ss 'GMT'",
+        "ddd, DD MMM YYYY HH:mm:ss ZZ",
+        "ddd, DD MMM YYYY HH:mm:ss",
+        "EEE, dd MMM yyyy HH:mm:ss 'GMT'",
+        "EEE MMM dd yyyy HH:mm:ss 'GMT'Z",
+        "yyyy-MM-dd HH:mm:ssXXX",
+        "EEE MMM dd yyyy HH:mm:ss 'GMT'XXX",
+        "EEE, dd MMM yyyy HH:mm:ss 'GMT'XXX",
+        "EEE MMM dd yyyy HH:mm:ss 'GMT'XXXXX"
+    ];
+
+    for (let formatString of formats) {
         try {
-            dateTime = DateTime.fromISO(dateString).setZone(timezone);
-        } catch (e) {
-            handleError('Invalid date format:', e.message);
-            return null;
+            return parse(dateString, formatString);
+        } catch (error) {
+            continue;
         }
     }
-    return dateTime;
+
+    throw new Error(`Unsupported date format: ${dateString}`);
 };
+
 async function main() {
     const errors = createErrorArray();
 
     try {
         const accessToken = await authenticateUser();
+        console.log(`step: authenticateUser, accessToken: ${accessToken}`);
         const feeds = await getRssFeeds();
+        console.log(`step: getRssFeeds, feeds: ${feeds.length}`);
         const results = await Promise.allSettled(feeds.map(feed => processFeed(feed, errors)));
-
+        console.log(`step: processFeed, results: ${results.length}`);
         const successfulResults = results.filter(result => result.status === 'fulfilled').map(result => result.value);
 
         const updates = successfulResults.flatMap(result => result.updates);
         const notifications = successfulResults.flatMap(result => result.notifications);
-
+        console.log(`step: successfulResults, updates: ${updates.length}, notifications: ${notifications.length}`);
         // 最新の日付で更新
         if (updates.length > 0) {
+            const feedMap = new Map(feeds.map(feed => [feed.id, feed]));
+        
             const latestUpdates = updates.reduce((acc, update) => {
                 const existing = acc.find(item => item.id === update.id);
-                const fullFeedData = feeds.find(feed => feed.id === update.id);
-
+                const fullFeedData = feedMap.get(update.id);
+        
                 if (existing) {
-                    if (DateTime.fromISO(update['last_retrieved']) > DateTime.fromISO(existing['last_retrieved'])) {
-                        existing['last_retrieved'] = update['last_retrieved'];
+                    console.log(`existing: ${existing['last_retrieved']}, update: ${update['last_retrieved']}`);
+                    try {
+                        const updateDate = parseDateString(update['last_retrieved']);
+                        const existingDate = parseDateString(existing['last_retrieved']);
+                        console.log(`updateDate: ${updateDate}, existingDate: ${existingDate}`);
+                        if (isAfter(updateDate, existingDate)) {
+                            existing['last_retrieved'] = format(updateDate, "ddd, DD MMM YYYY HH:mm:ss");
+                        }
+                    } catch (error) {
+                        console.error('Date parsing error:', error.message);
                     }
                 } else {
-                    acc.push({ ...fullFeedData, 'last_retrieved': update['last_retrieved'] });
+                    if (fullFeedData) {
+                        console.log(`new: ${update['last_retrieved']}`);
+                        try {
+                            const updateDate = parseDateString(update['last_retrieved']);
+                            console.log(`updateDate: ${updateDate}`);
+                            acc.push({ ...fullFeedData, 'last_retrieved': format(updateDate, "ddd, DD MMM YYYY HH:mm:ss") });
+                        } catch (error) {
+                            console.error('Date parsing error:', error.message);
+                        }
+                    } else {
+                        console.error('Full feed data not found for update id:', update.id);
+                    }
                 }
                 return acc;
             }, []);
+        
+            console.log(`step: latestUpdates, latestUpdates: ${latestUpdates.length}`);
+            console.log(latestUpdates);
             const { error } = await supabase.from(SUPABASE_FEED_TABLE_NAME).upsert(latestUpdates, { onConflict: 'id' }).select();
-
+        
             if (error) {
                 throw error;
             }
@@ -222,10 +309,11 @@ async function main() {
                 acc[webhookUrl].push({ article, webhookType, feedType });
                 return acc;
             }, {});
-
+            console.log(`step: groupedNotifications, groupedNotifications: ${Object.keys(groupedNotifications).length}`);
             const notificationResults = await Promise.allSettled(Object.entries(groupedNotifications).map(([webhookUrl, articles]) => notifyDiscord(webhookUrl, articles.map(({ article }) => article), articles[0].webhookType, articles[0].feedType)));
-            
-            const failedNotifications = notificationResults.filter(result => result.status === 'rejected').map(result => result.reason);
+            console.log(`step: notifyDiscord, notificationResults: ${notificationResults.length}`);
+            const failedNotifications = notificationResults.filter(result => result.status === 'rejected').map(result => result.status === 'rejected' ? result.reason : null);
+            console.log(`step: failedNotifications, failedNotifications: ${failedNotifications.length}`);
             if (failedNotifications.length > 0) {
                 throw new Error(`Failed notifications: ${failedNotifications.map(err => err.message).join('\n')}`);
             }

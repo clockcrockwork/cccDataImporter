@@ -17,6 +17,9 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
+  
+    - name: Install libvips
+      run: sudo apt-get install -y libvips
 
     - name: Set up environment variables
       run: |
