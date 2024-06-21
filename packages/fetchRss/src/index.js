@@ -218,32 +218,9 @@ const parseDate = (dateString) => {
         return null;
     }
 };
-const parseDateString = (dateString) => {
-    const formats = [
-        "EEE, dd MMM yyyy HH:mm:ss 'GMT'",
-        "ddd, DD MMM YYYY HH:mm:ss ZZ",
-        "ddd, DD MMM YYYY HH:mm:ss",
-        "EEE, dd MMM yyyy HH:mm:ss 'GMT'",
-        "EEE MMM dd yyyy HH:mm:ss 'GMT'Z",
-        "yyyy-MM-dd HH:mm:ssXXX",
-        "EEE MMM dd yyyy HH:mm:ss 'GMT'XXX",
-        "EEE, dd MMM yyyy HH:mm:ss 'GMT'XXX",
-        "EEE MMM dd yyyy HH:mm:ss 'GMT'XXXXX"
-    ];
-
-    for (let formatString of formats) {
-        try {
-            return parse(dateString, formatString);
-        } catch (error) {
-            continue;
-        }
-    }
-
-    throw new Error(`Unsupported date format: ${dateString}`);
-};
-
 async function main() {
     const errors = createErrorArray();
+    const currentDateTime = new Date(); // 現在の日時を取得
 
     try {
         const accessToken = await authenticateUser();
@@ -257,47 +234,37 @@ async function main() {
         const updates = successfulResults.flatMap(result => result.updates);
         const notifications = successfulResults.flatMap(result => result.notifications);
         console.log(`step: successfulResults, updates: ${updates.length}, notifications: ${notifications.length}`);
-        // 最新の日付で更新
+        // 現在の日時で更新
         if (updates.length > 0) {
+            const currentDateTimeStr = format({
+                date: currentDateTime,
+                format: "ddd, DD MMM YYYY HH:mm:ss ZZ"
+            })
             const feedMap = new Map(feeds.map(feed => [feed.id, feed]));
-        
-            const latestUpdates = updates.reduce((acc, update) => {
+
+            // updateのあるfeedのみidの重複を除いて取得
+            const selectMap = updates.reduce((acc, update) => {
                 const existing = acc.find(item => item.id === update.id);
-                const fullFeedData = feedMap.get(update.id);
-        
-                if (existing) {
-                    console.log(`existing: ${existing['last_retrieved']}, update: ${update['last_retrieved']}`);
-                    try {
-                        const updateDate = parseDateString(update['last_retrieved']);
-                        const existingDate = parseDateString(existing['last_retrieved']);
-                        console.log(`updateDate: ${updateDate}, existingDate: ${existingDate}`);
-                        if (isAfter(updateDate, existingDate)) {
-                            existing['last_retrieved'] = format(updateDate, "ddd, DD MMM YYYY HH:mm:ss");
-                        }
-                    } catch (error) {
-                        console.error('Date parsing error:', error.message);
-                    }
-                } else {
-                    if (fullFeedData) {
-                        console.log(`new: ${update['last_retrieved']}`);
-                        try {
-                            const updateDate = parseDateString(update['last_retrieved']);
-                            console.log(`updateDate: ${updateDate}`);
-                            acc.push({ ...fullFeedData, 'last_retrieved': format(updateDate, "ddd, DD MMM YYYY HH:mm:ss") });
-                        } catch (error) {
-                            console.error('Date parsing error:', error.message);
-                        }
-                    } else {
-                        console.error('Full feed data not found for update id:', update.id);
-                    }
+                if (!existing) {
+                    acc.push(update);
                 }
                 return acc;
             }, []);
-        
+            console.log(selectMap);
+
+            // updateのあるfeedをfeedMapから取得し、last_retrievedを更新
+            const latestUpdates = selectMap.map(update => {
+                const fullFeedData = feedMap.get(update.id);
+                if (fullFeedData) {
+                    return { ...fullFeedData, 'last_retrieved': currentDateTimeStr };
+                } else {
+                    console.error('Full feed data not found for update id:', update.id);
+                }
+            });
+
             console.log(`step: latestUpdates, latestUpdates: ${latestUpdates.length}`);
-            console.log(latestUpdates);
             const { error } = await supabase.from(SUPABASE_FEED_TABLE_NAME).upsert(latestUpdates, { onConflict: 'id' }).select();
-        
+
             if (error) {
                 throw error;
             }
