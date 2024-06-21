@@ -34,19 +34,12 @@ jobs:
         echo "SUPABASE_PASSWORD=${{ secrets.SUPABASE_PASSWORD }}" >> $GITHUB_ENV
         
     - name: Add Sharp
-      run: yarn workspace fetchRss add sharp --ignore-engines
+      run: |
+        yarn workspace fetchRss add sharp --ignore-engines
       
     - name: Install dependencies
       run: |
         yarn install --network-concurrency 1
-      working-directory: packages/fetchRss
-    - name: Install sharp-cli
-      run: |
-        npm install -g sharp-cli
-    
-    - name: Rebuild sharp
-      run: |
-        npx sharp-cli install --force
       working-directory: packages/fetchRss
 
     - name: Run Fetch RSS Feeds
