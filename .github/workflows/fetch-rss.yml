@@ -35,7 +35,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        yarn install --ignore-optional
+        yarn install --network-concurrency 1
       working-directory: packages/fetchRss
     
     - name: Rebuild sharp
