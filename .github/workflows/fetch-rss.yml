@@ -35,9 +35,14 @@ jobs:
 
     - name: Install dependencies
       run: |
-        yarn install
+        yarn install --ignore-optional
       working-directory: packages/fetchRss
     
+    - name: Rebuild sharp
+      run: |
+        npx sharp-cli install --force
+      working-directory: packages/fetchRss
+
     - name: Run Fetch RSS Feeds
       run: |
         node src/index.js
