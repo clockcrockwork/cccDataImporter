@@ -40,6 +40,9 @@ jobs:
       run: |
         yarn install --network-concurrency 1
       working-directory: packages/fetchRss
+    - name: Install sharp-cli
+      run: |
+        npm install -g sharp-cli
     
     - name: Rebuild sharp
       run: |
