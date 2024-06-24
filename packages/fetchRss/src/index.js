@@ -170,12 +170,20 @@ async function processImage(imageUrl, imageName) {
     }
 }
 
-async function processFeeds(feeds) {
+async function processFeeds(feeds, concurrencyLimit = 5) {
   const errors = new Set();
-  const feedPromises = feeds.map(feed => processFeed(feed, errors));
-  const results = await Promise.allSettled(feedPromises);
-  results.filter(result => result.status === 'rejected').forEach(result => errors.add(result.reason));
-  return results.filter(result => result.status === 'fulfilled').map(result => result.value)
+  const results = [];
+
+  for (let i = 0; i < feeds.length; i += concurrencyLimit) {
+    const feedBatch = feeds.slice(i, i + concurrencyLimit);
+    const feedPromises = feedBatch.map(feed => processFeed(feed, errors));
+    const batchResults = await Promise.allSettled(feedPromises);
+
+    batchResults.filter(result => result.status === 'rejected').forEach(result => errors.add(result.reason));
+    results.push(...batchResults.filter(result => result.status === 'fulfilled').map(result => result.value));
+  }
+
+  return results;
 }
 
 async function processFeed(feed, errors) {
