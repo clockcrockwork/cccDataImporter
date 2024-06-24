@@ -105,16 +105,21 @@ async function processImage(imageUrl, imageName) {
     console.log('Processing image:', imageUrl);
 
     try {
+        const fetchStartTime = Date.now();
         const response = await fetch(imageUrl);
+        const fetchEndTime = Date.now();
+        console.log(`Fetching image took ${fetchEndTime - fetchStartTime}ms`);
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.startsWith('image/')) {
+        if (!contentType || contentType.startsWith('image/') === false) {
             throw new Error('The URL does not point to a valid image');
         }
 
+        const transformStartTime = Date.now();
         const transform = sharp()
             .resize(400)
             .png({ quality: 60, compressionLevel: 9 });
@@ -123,7 +128,10 @@ async function processImage(imageUrl, imageName) {
             response.body,
             transform
         );
+        const transformEndTime = Date.now();
+        console.log(`Transforming image took ${transformEndTime - transformStartTime}ms`);
 
+        const uploadStartTime = Date.now();
         const { data, error } = await supabase.storage
             .from(SUPABASE_STORAGE_BUCKET_NAME)
             .upload(`${SUPABASE_STORAGE_FOLDER_NAME}/${imageName}.png`, processedImageBuffer, {
@@ -131,6 +139,8 @@ async function processImage(imageUrl, imageName) {
                 upsert: true,
                 contentType: 'image/png'
             });
+        const uploadEndTime = Date.now();
+        console.log(`Uploading image took ${uploadEndTime - uploadStartTime}ms`);
 
         if (error) {
             throw error;
