@@ -170,43 +170,51 @@ async function processImage(imageUrl, imageName) {
     }
 }
 
+async function processFeeds(feeds) {
+  const errors = new Set();
+  const feedPromises = feeds.map(feed => processFeed(feed, errors));
+  const results = await Promise.allSettled(feedPromises);
+  results.filter(result => result.status === 'rejected').forEach(result => errors.add(result.reason));
+  return results.filter(result => result.status === 'fulfilled').map(result => result.value)
+}
+
 async function processFeed(feed, errors) {
-    const startTime = Date.now();
-    try {
-        const lastRetrieved = feed.last_retrieved ? tzDate(feed.last_retrieved, timezone) : null;
+  const startTime = Date.now();
+  try {
+      const lastRetrieved = feed.last_retrieved ? tzDate(feed.last_retrieved, timezone) : null;
 
-        const newArticles = await checkForNewArticles(feed.url, lastRetrieved);
-        if (newArticles.length === 0) return { feedId: feed.id, updates: [], notifications: [] };
+      const newArticles = await checkForNewArticles(feed.url, lastRetrieved);
+      if (newArticles.length === 0) return { feedId: feed.id, updates: [], notifications: [] };
 
-        const latestArticle = newArticles.reduce((latest, article) => 
-            parseDate(article.pubDate) > parseDate(latest.pubDate) ? article : latest, newArticles[0]);
-        
-        if (feed['hook_type'] === 'thread-normal') {
-            let imageUrl = latestArticle.enclosure?.url;
-            if (!imageUrl) {
-                const imgMatch = latestArticle.content?.match(/<img[^>]+src="([^">]+)"/);
-                imageUrl = imgMatch ? imgMatch[1] : null;
-            }
-            if (imageUrl) {
-                await processImage(imageUrl, feed['webhook']);
-            } else {
-                console.log(`No valid image found for feed: ${feed.id}`);
-            }
-        }
+      const latestArticle = newArticles.reduce((latest, article) => 
+          parseDate(article.pubDate) > parseDate(latest.pubDate) ? article : latest, newArticles[0]);
+      
+      if (feed['hook_type'] === 'thread-normal') {
+          let imageUrl = latestArticle.enclosure?.url;
+          if (!imageUrl) {
+              const imgMatch = latestArticle.content?.match(/<img[^>]+src="([^">]+)"/);
+              imageUrl = imgMatch ? imgMatch[1] : null;
+          }
+          if (imageUrl) {
+              await processImage(imageUrl, feed['webhook']);
+          } else {
+              console.log(`No valid image found for feed: ${feed.id}`);
+          }
+      }
 
-        return {
-            feedId: feed.id,
-            updates: newArticles.map(article => ({ id: feed.id, 'last_retrieved': article.pubDate })),
-            notifications: newArticles.map(article => ({ webhookUrl: feed['webhook'], article, webhookType: feed['hook_type'], feedType: feed['feed_type'] }))
-        };
-    } catch (error) {
-        errors.addError(error);
-        return { feedId: feed.id, updates: [], notifications: [] };
-    }
-    finally {
-        const endTime = Date.now();
-        console.log(`step: processFeed, feedId: ${feed.id}, duration: ${endTime - startTime}ms`);
-    }
+      return {
+          feedId: feed.id,
+          updates: newArticles.map(article => ({ id: feed.id, 'last_retrieved': article.pubDate })),
+          notifications: newArticles.map(article => ({ webhookUrl: feed['webhook'], article, webhookType: feed['hook_type'], feedType: feed['feed_type'] }))
+      };
+  } catch (error) {
+      errors.addError(error);
+      return { feedId: feed.id, updates: [], notifications: [] };
+  }
+  finally {
+      const endTime = Date.now();
+      console.log(`step: processFeed, feedId: ${feed.id}, duration: ${endTime - startTime}ms`);
+  }
 }
 
 
@@ -279,11 +287,10 @@ async function main() {
     try {
         const accessToken = await authenticateUser();
         const feeds = await getRssFeeds();
-        const results = await Promise.allSettled(feeds.map(feed => processFeed(feed, errors)));
-        const successfulResults = results.filter(result => result.status === 'fulfilled').map(result => result.value);
+        const results = await processFeeds(feeds);
 
-        const updates = successfulResults.flatMap(result => result.updates);
-        const notifications = successfulResults.flatMap(result => result.notifications);
+        const updates = results.flatMap(result => result.updates);
+        const notifications = results.flatMap(result => result.notifications);
         // 現在の日時で更新
         if (updates.length > 0) {
             const currentDateTimeStr = format({
