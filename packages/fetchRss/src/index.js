@@ -96,18 +96,18 @@ async function processImage(imageUrl, imageName) {
     const decodedUrl = decode(imageUrl);
 
     try {
-        const response = await fetch(decodedUrl);
+        const response = await fetch(decodedUrl, {
+            duplex: 'half'
+        });
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        // response.body を Readable stream に変換
         const readableStream = Readable.from(response.body);
         
-        // ストリームとしてデータを処理
         const transform = sharp()
-            .resize(800) // 必要に応じてリサイズ
-            .png({ quality: 80 }); // PNGの品質を調整
+            .resize(800)
+            .png({ quality: 80 });
         
         const { error } = await supabase.storage
             .from(SUPABASE_STORAGE_BUCKET_NAME)
