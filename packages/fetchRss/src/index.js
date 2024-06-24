@@ -95,50 +95,54 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
 }
   
 async function processImage(imageUrl, imageName) {
-  // キャッシュチェック
-  if (processedUrls.has(imageUrl)) {
-      console.log(`Image already processed: ${imageUrl}`);
-      return;
-  }
+    if (processedUrls.has(imageUrl)) {
+        console.log(`Image already processed: ${imageUrl}`);
+        return;
+    }
 
-  const startTime = Date.now();
-  console.log('Processing image:', imageUrl);
+    const startTime = Date.now();
+    console.log('Processing image:', imageUrl);
 
-  try {
-      const response = await fetch(imageUrl);
-      if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const transform = sharp()
-          .resize(400)
-          .png({ quality: 60, compressionLevel: 9 });
+    try {
+        const response = await fetch(imageUrl);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-      const processedImageBuffer = await pipeline(
-          response.body,
-          transform
-      );
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.startsWith('image/')) {
+            throw new Error('The URL does not point to a valid image');
+        }
 
-      const { data, error } = await supabase.storage
-          .from(SUPABASE_STORAGE_BUCKET_NAME)
-          .upload(`${SUPABASE_STORAGE_FOLDER_NAME}/${imageName}.png`, processedImageBuffer, {
-              cacheControl: '31536000',
-              upsert: true,
-              contentType: 'image/png'
-          });
+        const transform = sharp()
+            .resize(400)
+            .png({ quality: 60, compressionLevel: 9 });
 
-      if (error) {
-          throw error;
-      }
+        const processedImageBuffer = await pipeline(
+            response.body,
+            transform
+        );
 
-      processedUrls.add(imageUrl);
+        const { data, error } = await supabase.storage
+            .from(SUPABASE_STORAGE_BUCKET_NAME)
+            .upload(`${SUPABASE_STORAGE_FOLDER_NAME}/${imageName}.png`, processedImageBuffer, {
+                cacheControl: '31536000',
+                upsert: true,
+                contentType: 'image/png'
+            });
 
-      const endTime = Date.now();
-      console.log(`Image processed and uploaded successfully in ${endTime - startTime}ms:`, data);
-  } catch (error) {
-      console.error('Error processing image:', error);
-      throw error;
-  }
+        if (error) {
+            throw error;
+        }
+
+        processedUrls.add(imageUrl);
+
+        const endTime = Date.now();
+        console.log(`Image processed and uploaded successfully in ${endTime - startTime}ms:`, data);
+    } catch (error) {
+        console.error('Error processing image:', error);
+        // エラーをスローせず、ログに記録するだけにする
+    }
 }
 
 async function processFeed(feed, errors) {
@@ -153,9 +157,15 @@ async function processFeed(feed, errors) {
             parseDate(article.pubDate) > parseDate(latest.pubDate) ? article : latest, newArticles[0]);
         
         if (feed['hook_type'] === 'thread-normal') {
-            const imageUrl = latestArticle.enclosure?.url || latestArticle.content?.match(/<img[^>]+src="([^">]+)"/)?.[1];
+            let imageUrl = latestArticle.enclosure?.url;
+            if (!imageUrl) {
+                const imgMatch = latestArticle.content?.match(/<img[^>]+src="([^">]+)"/);
+                imageUrl = imgMatch ? imgMatch[1] : null;
+            }
             if (imageUrl) {
                 await processImage(imageUrl, feed['webhook']);
+            } else {
+                console.log(`No valid image found for feed: ${feed.id}`);
             }
         }
 
