@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import sharp from 'sharp';
 import { decode } from 'html-entities';
 import fetch from 'node-fetch';
-import { Readable } from 'stream';
+import { pipeline } from 'stream/promises';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -94,6 +94,8 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
 }
   
 async function processImage(imageUrl, imageName) {
+    const startTime = Date.now();
+    console.log('Processing image:', imageUrl);
     const decodedUrl = decode(imageUrl);
 
     try {
@@ -101,21 +103,21 @@ async function processImage(imageUrl, imageName) {
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
+        
+        // sharpのトランスフォームストリームを作成
+        const transform = sharp()
+            .resize(800) // 必要に応じてリサイズ
+            .png({ quality: 80 }); // PNGの品質を調整
+        
+        // パイプラインを使用してストリームを処理
+        const processedImageBuffer = await pipeline(
+            response.body,
+            transform
+        );
 
-        // レスポンスボディをバッファに変換
-        const arrayBuffer = await response.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        // バッファをsharpで処理
-        const image = await sharp(buffer)
-            .resize(800)
-            .png({ quality: 80 })
-            .toBuffer();
-
-        // Supabaseにアップロード
-        const { error } = await supabase.storage
+        const { data, error } = await supabase.storage
             .from(SUPABASE_STORAGE_BUCKET_NAME)
-            .upload(`${SUPABASE_STORAGE_FOLDER_NAME}/${imageName}.png`, image, {
+            .upload(`${SUPABASE_STORAGE_FOLDER_NAME}/${imageName}.png`, processedImageBuffer, {
                 cacheControl: '31536000',
                 upsert: true,
                 contentType: 'image/png'
@@ -124,8 +126,15 @@ async function processImage(imageUrl, imageName) {
         if (error) {
             throw error;
         }
+
+        console.log('Image processed and uploaded successfully:', data);
     } catch (error) {
+        console.error('Error processing image:', error);
         throw error;
+    }
+    finally {
+        const endTime = Date.now();
+        console.log(`step: processImage, imageUrl: ${imageUrl}, duration: ${endTime - startTime}ms`);
     }
 }
 
