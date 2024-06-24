@@ -110,6 +110,9 @@ async function processImage(imageUrl, imageName) {
         const image = await sharp(buffer).toFormat('png').toBuffer();
         const contentType = 'image/png';
 
+        console.log('Bucket:', SUPABASE_STORAGE_BUCKET_NAME);
+        console.log('Folder:', SUPABASE_STORAGE_FOLDER_NAME);
+
         const { error } = await supabase.storage
             .from(SUPABASE_STORAGE_BUCKET_NAME)
             .upload(`${SUPABASE_STORAGE_FOLDER_NAME}/${imageName}.png`, image, {
