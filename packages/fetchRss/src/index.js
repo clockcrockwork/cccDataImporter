@@ -96,9 +96,7 @@ async function processImage(imageUrl, imageName) {
     const decodedUrl = decode(imageUrl);
 
     try {
-        const response = await fetch(decodedUrl, {
-            duplex: 'half'
-        });
+        const response = await fetch(decodedUrl, { duplex: 'half' });
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -126,6 +124,7 @@ async function processImage(imageUrl, imageName) {
 }
 
 async function processFeed(feed, errors) {
+    const startTime = Date.now();
     try {
         const lastRetrieved = feed.last_retrieved ? tzDate(feed.last_retrieved, timezone) : null;
 
@@ -150,6 +149,10 @@ async function processFeed(feed, errors) {
     } catch (error) {
         errors.addError(error);
         return { feedId: feed.id, updates: [], notifications: [] };
+    }
+    finally {
+        const endTime = Date.now();
+        console.log(`step: processFeed, feedId: ${feed.id}, duration: ${endTime - startTime}ms`);
     }
 }
 
