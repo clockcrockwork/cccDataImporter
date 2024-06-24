@@ -95,6 +95,7 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
 }
   
 async function processImage(imageUrl, imageName) {
+    imageUrl = decode(imageUrl);
     if (processedUrls.has(imageUrl)) {
         console.log(`Image already processed: ${imageUrl}`);
         return;
@@ -141,7 +142,6 @@ async function processImage(imageUrl, imageName) {
         console.log(`Image processed and uploaded successfully in ${endTime - startTime}ms:`, data);
     } catch (error) {
         console.error('Error processing image:', error);
-        // エラーをスローせず、ログに記録するだけにする
     }
 }
 
