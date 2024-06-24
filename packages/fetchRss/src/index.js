@@ -57,10 +57,25 @@ function createErrorArray() {
 }
 
 async function checkForNewArticles(feedUrl, lastRetrieved) {
+    const startTime = Date.now();
+    console.log(`Checking for new articles from feed: ${feedUrl}`);
+
+    const fetchStartTime = Date.now();
     const feed = await parser.parseURL(feedUrl);
+    const fetchEndTime = Date.now();
+    console.log(`Fetching and parsing feed took ${fetchEndTime - fetchStartTime}ms`);
+
+    const filterStartTime = Date.now();
     const newArticles = feed.items.filter(item => parseDate(item.pubDate) > parseDate(lastRetrieved));
+    const filterEndTime = Date.now();
+    console.log(`Filtering new articles took ${filterEndTime - filterStartTime}ms`);
+
+    const endTime = Date.now();
+    console.log(`Total time for checking new articles: ${endTime - startTime}ms`);
+
     return newArticles;
 }
+
 
 async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
     const payloads = articles.map(article => {
