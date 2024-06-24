@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import sharp from 'sharp';
 import { decode } from 'html-entities';
+import { Readable } from 'stream';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -102,15 +103,18 @@ async function processImage(imageUrl, imageName) {
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
+
+        // response.body を Readable stream に変換
+        const readableStream = Readable.from(response.body);
         
         // ストリームとしてデータを処理
-        const stream = sharp()
+        const transform = sharp()
             .resize(800) // 必要に応じてリサイズ
-            .png({ quality: 80 }) // PNGの品質を調整
+            .png({ quality: 80 }); // PNGの品質を調整
         
         const { error } = await supabase.storage
             .from(SUPABASE_STORAGE_BUCKET_NAME)
-            .upload(`${SUPABASE_STORAGE_FOLDER_NAME}/${imageName}.png`, response.body.pipe(stream), {
+            .upload(`${SUPABASE_STORAGE_FOLDER_NAME}/${imageName}.png`, readableStream.pipe(transform), {
                 cacheControl: '31536000',
                 upsert: true,
                 contentType: 'image/png'
