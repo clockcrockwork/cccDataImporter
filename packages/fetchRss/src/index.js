@@ -18,6 +18,7 @@ if (!process.env.GITHUB_ACTIONS) {
 
 const timezone = 'Asia/Tokyo';
 const parser = new Parser();
+const processedUrls = new Set();
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
@@ -94,48 +95,50 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
 }
   
 async function processImage(imageUrl, imageName) {
-    const startTime = Date.now();
-    console.log('Processing image:', imageUrl);
-    const decodedUrl = decode(imageUrl);
+  // キャッシュチェック
+  if (processedUrls.has(imageUrl)) {
+      console.log(`Image already processed: ${imageUrl}`);
+      return;
+  }
 
-    try {
-        const response = await fetch(decodedUrl);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        // sharpのトランスフォームストリームを作成
-        const transform = sharp()
-            .resize(800) // 必要に応じてリサイズ
-            .png({ quality: 80 }); // PNGの品質を調整
-        
-        // パイプラインを使用してストリームを処理
-        const processedImageBuffer = await pipeline(
-            response.body,
-            transform
-        );
+  const startTime = Date.now();
+  console.log('Processing image:', imageUrl);
 
-        const { data, error } = await supabase.storage
-            .from(SUPABASE_STORAGE_BUCKET_NAME)
-            .upload(`${SUPABASE_STORAGE_FOLDER_NAME}/${imageName}.png`, processedImageBuffer, {
-                cacheControl: '31536000',
-                upsert: true,
-                contentType: 'image/png'
-            });
+  try {
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const transform = sharp()
+          .resize(400)
+          .png({ quality: 60, compressionLevel: 9 });
 
-        if (error) {
-            throw error;
-        }
+      const processedImageBuffer = await pipeline(
+          response.body,
+          transform
+      );
 
-        console.log('Image processed and uploaded successfully:', data);
-    } catch (error) {
-        console.error('Error processing image:', error);
-        throw error;
-    }
-    finally {
-        const endTime = Date.now();
-        console.log(`step: processImage, imageUrl: ${imageUrl}, duration: ${endTime - startTime}ms`);
-    }
+      const { data, error } = await supabase.storage
+          .from(SUPABASE_STORAGE_BUCKET_NAME)
+          .upload(`${SUPABASE_STORAGE_FOLDER_NAME}/${imageName}.png`, processedImageBuffer, {
+              cacheControl: '31536000',
+              upsert: true,
+              contentType: 'image/png'
+          });
+
+      if (error) {
+          throw error;
+      }
+
+      processedUrls.add(imageUrl);
+
+      const endTime = Date.now();
+      console.log(`Image processed and uploaded successfully in ${endTime - startTime}ms:`, data);
+  } catch (error) {
+      console.error('Error processing image:', error);
+      throw error;
+  }
 }
 
 async function processFeed(feed, errors) {
