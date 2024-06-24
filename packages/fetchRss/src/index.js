@@ -98,24 +98,22 @@ async function processImage(imageUrl, imageName) {
     console.log('Decoded URL:', decodedUrl);
 
     try {
-        // URLから画像をダウンロード
         const response = await fetch(decodedUrl);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const arrayBuffer = await response.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        // ダウンロードした画像をsharpで処理
-        const image = await sharp(buffer).toFormat('png').toBuffer();
-        const contentType = 'image/png';
-
+        
+        // ストリームとしてデータを処理
+        const stream = sharp()
+            .resize(800) // 必要に応じてリサイズ
+            .png({ quality: 80 }) // PNGの品質を調整
+        
         const { error } = await supabase.storage
             .from(SUPABASE_STORAGE_BUCKET_NAME)
-            .upload(`${SUPABASE_STORAGE_FOLDER_NAME}/${imageName}.png`, image, {
+            .upload(`${SUPABASE_STORAGE_FOLDER_NAME}/${imageName}.png`, response.body.pipe(stream), {
                 cacheControl: '31536000',
                 upsert: true,
-                contentType: contentType
+                contentType: 'image/png'
             });
 
         if (error) {
