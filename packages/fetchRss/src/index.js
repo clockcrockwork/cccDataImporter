@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import sharp from 'sharp';
 import { decode } from 'html-entities';
+import { Readable } from 'stream';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -54,14 +55,12 @@ function createErrorArray() {
 }
 
 async function checkForNewArticles(feedUrl, lastRetrieved) {
-    console.log('Checking for new articles:', feedUrl);
     const feed = await parser.parseURL(feedUrl);
     const newArticles = feed.items.filter(item => parseDate(item.pubDate) > parseDate(lastRetrieved));
     return newArticles;
 }
 
 async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
-    console.log('Notifying Discord:', webhookUrl);
     const payloads = articles.map(article => {
         if (feedType === SUPABASE_FEED_TYPE_X) {
             return {
@@ -95,30 +94,25 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
   
 async function processImage(imageUrl, imageName) {
     const decodedUrl = decode(imageUrl);
-    console.log('Decoded URL:', decodedUrl);
 
     try {
-        // URLから画像をダウンロード
-        const response = await fetch(decodedUrl);
+        const response = await fetch(decodedUrl, { duplex: 'half' });
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const arrayBuffer = await response.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
 
-        // ダウンロードした画像をsharpで処理
-        const image = await sharp(buffer).toFormat('png').toBuffer();
-        const contentType = 'image/png';
-
-        console.log('Bucket:', SUPABASE_STORAGE_BUCKET_NAME);
-        console.log('Folder:', SUPABASE_STORAGE_FOLDER_NAME);
-
+        const readableStream = Readable.from(response.body);
+        
+        const transform = sharp()
+            .resize(800)
+            .png({ quality: 80 });
+        
         const { error } = await supabase.storage
             .from(SUPABASE_STORAGE_BUCKET_NAME)
-            .upload(`${SUPABASE_STORAGE_FOLDER_NAME}/${imageName}.png`, image, {
+            .upload(`${SUPABASE_STORAGE_FOLDER_NAME}/${imageName}.png`, readableStream.pipe(transform), {
                 cacheControl: '31536000',
                 upsert: true,
-                contentType: contentType
+                contentType: 'image/png'
             });
 
         if (error) {
@@ -130,7 +124,7 @@ async function processImage(imageUrl, imageName) {
 }
 
 async function processFeed(feed, errors) {
-    console.log('Processing feed:', feed.url);
+    const startTime = Date.now();
     try {
         const lastRetrieved = feed.last_retrieved ? tzDate(feed.last_retrieved, timezone) : null;
 
@@ -155,6 +149,10 @@ async function processFeed(feed, errors) {
     } catch (error) {
         errors.addError(error);
         return { feedId: feed.id, updates: [], notifications: [] };
+    }
+    finally {
+        const endTime = Date.now();
+        console.log(`step: processFeed, feedId: ${feed.id}, duration: ${endTime - startTime}ms`);
     }
 }
 
@@ -227,16 +225,12 @@ async function main() {
 
     try {
         const accessToken = await authenticateUser();
-        console.log(`step: authenticateUser, accessToken: ${accessToken}`);
         const feeds = await getRssFeeds();
-        console.log(`step: getRssFeeds, feeds: ${feeds.length}`);
         const results = await Promise.allSettled(feeds.map(feed => processFeed(feed, errors)));
-        console.log(`step: processFeed, results: ${results.length}`);
         const successfulResults = results.filter(result => result.status === 'fulfilled').map(result => result.value);
 
         const updates = successfulResults.flatMap(result => result.updates);
         const notifications = successfulResults.flatMap(result => result.notifications);
-        console.log(`step: successfulResults, updates: ${updates.length}, notifications: ${notifications.length}`);
         // 現在の日時で更新
         if (updates.length > 0) {
             const currentDateTimeStr = format({
@@ -253,7 +247,6 @@ async function main() {
                 }
                 return acc;
             }, []);
-            console.log(selectMap);
 
             // updateのあるfeedをfeedMapから取得し、last_retrievedを更新
             const latestUpdates = selectMap.map(update => {
@@ -279,11 +272,8 @@ async function main() {
                 acc[webhookUrl].push({ article, webhookType, feedType });
                 return acc;
             }, {});
-            console.log(`step: groupedNotifications, groupedNotifications: ${Object.keys(groupedNotifications).length}`);
             const notificationResults = await Promise.allSettled(Object.entries(groupedNotifications).map(([webhookUrl, articles]) => notifyDiscord(webhookUrl, articles.map(({ article }) => article), articles[0].webhookType, articles[0].feedType)));
-            console.log(`step: notifyDiscord, notificationResults: ${notificationResults.length}`);
             const failedNotifications = notificationResults.filter(result => result.status === 'rejected').map(result => result.status === 'rejected' ? result.reason : null);
-            console.log(`step: failedNotifications, failedNotifications: ${failedNotifications.length}`);
             if (failedNotifications.length > 0) {
                 throw new Error(`Failed notifications: ${failedNotifications.map(err => err.message).join('\n')}`);
             }

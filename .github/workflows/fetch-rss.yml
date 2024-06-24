@@ -19,7 +19,9 @@ jobs:
         node-version: '20'
   
     - name: Install libvips
-      run: sudo apt-get install -y libvips
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libvips-dev
 
     - name: Set up environment variables
       run: |
@@ -32,12 +34,22 @@ jobs:
         echo "ERROR_WEBHOOK_URL=${{ secrets.ERROR_WEBHOOK_URL }}" >> $GITHUB_ENV
         echo "SUPABASE_EMAIL=${{ secrets.SUPABASE_EMAIL }}" >> $GITHUB_ENV
         echo "SUPABASE_PASSWORD=${{ secrets.SUPABASE_PASSWORD }}" >> $GITHUB_ENV
-
+        
+    - name: Add Sharp
+      run: |
+        yarn add sharp --ignore-engines
+      working-directory: packages/fetchRss
+      
     - name: Install dependencies
       run: |
-        yarn install
+        yarn install --network-concurrency 1 --ignore-engines
       working-directory: packages/fetchRss
-    
+
+    - name: Verify Sharp installation
+      run: |
+        node -e "require('sharp')"
+      working-directory: packages/fetchRss
+
     - name: Run Fetch RSS Feeds
       run: |
         node src/index.js
