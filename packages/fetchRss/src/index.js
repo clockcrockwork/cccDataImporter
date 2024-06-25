@@ -61,17 +61,14 @@ async function checkForNewArticles(feedUrl, lastRetrieved) {
     {
         const startTime = Date.now();
         console.log(`Checking for new articles from feed: ${feedUrl}`);
-
         const fetchStartTime = Date.now();
-        // const feed = await parser.parseURL(feedUrl);
-        // feedはjson形式で取得されるように変更する
         const feed = await fetch(feedUrl);
         const feedData = await feed.json();
         const fetchEndTime = Date.now();
         console.log(`Fetching and parsing feed took ${fetchEndTime - fetchStartTime}ms`);
 
         const filterStartTime = Date.now();
-        const newArticles = feedData.items.filter(item => parseDate(item.pubDate) > parseDate(lastRetrieved));
+        const newArticles = feedData.items.filter(item => parseDate(item.date_published) > parseDate(lastRetrieved));
         const filterEndTime = Date.now();
         console.log(`Filtering new articles took ${filterEndTime - filterStartTime}ms`);
 
@@ -99,7 +96,7 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
                     title: article.title,
                     description: article.contentSnippet,
                     url: article.link,
-                    timestamp: format(tzDate(article.pubDate, 'UTC'), "yyyy-MM-dd'T'HH:mm:ssXXX", { timeZone: 'UTC' }),
+                    timestamp: format(tzDate(article.date_published, 'UTC'), "yyyy-MM-dd'T'HH:mm:ssXXX", { timeZone: 'UTC' }),
                 }]
             };
         }
@@ -199,30 +196,30 @@ async function processFeeds(feeds, concurrencyLimit = 5) {
 async function processFeed(feed, errors) {
   const startTime = Date.now();
   try {
-      const lastRetrieved = feed.last_retrieved ? tzDate(feed.last_retrieved, timezone) : null;
+        const lastRetrieved = feed.last_retrieved ? tzDate(feed.last_retrieved, timezone) : null;
 
-      const newArticles = await checkForNewArticles(feed.url, lastRetrieved);
-      if (newArticles.length === 0) return { feedId: feed.id, updates: [], notifications: [] };
+        const newArticles = await checkForNewArticles(feed.url, lastRetrieved);
+        if (newArticles.length === 0) return { feedId: feed.id, updates: [], notifications: [] };
+        console.log(`Found ${newArticles.length} new articles for feed: ${feed.id}`);
+        const latestArticle = newArticles.reduce((latest, article) => 
+            parseDate(article.date_published) > parseDate(latest.date_published) ? article : latest, newArticles[0]);
 
-      const latestArticle = newArticles.reduce((latest, article) => 
-          parseDate(article.pubDate) > parseDate(latest.pubDate) ? article : latest, newArticles[0]);
-      
-      if (feed['hook_type'] === 'thread-normal') {
-          let imageUrl = latestArticle.enclosure?.url;
-          if (!imageUrl) {
-              const imgMatch = latestArticle.content?.match(/<img[^>]+src="([^">]+)"/);
-              imageUrl = imgMatch ? imgMatch[1] : null;
-          }
-          if (imageUrl) {
-              await processImage(imageUrl, feed['webhook']);
-          } else {
-              console.log(`No valid image found for feed: ${feed.id}`);
-          }
-      }
+        if (feed['hook_type'] === 'thread-normal') {
+            let imageUrl = latestArticle.enclosure?.url;
+            if (!imageUrl) {
+                const imgMatch = latestArticle.content?.match(/<img[^>]+src="([^">]+)"/);
+                imageUrl = imgMatch ? imgMatch[1] : null;
+            }
+            if (imageUrl) {
+                await processImage(imageUrl, feed['webhook']);
+            } else {
+                console.log(`No valid image found for feed: ${feed.id}`);
+            }
+        }
 
       return {
           feedId: feed.id,
-          updates: newArticles.map(article => ({ id: feed.id, 'last_retrieved': article.pubDate })),
+          updates: newArticles.map(article => ({ id: feed.id, 'last_retrieved': article.date_published })),
           notifications: newArticles.map(article => ({ webhookUrl: feed['webhook'], article, webhookType: feed['hook_type'], feedType: feed['feed_type'] }))
       };
   } catch (error) {
@@ -263,7 +260,6 @@ const parseDate = (dateString) => {
     try {
         dateString = String(dateString);
 
-        // Remove parentheses and their contents
         dateString = dateString.replace(/\s*\([^)]*\)/, '');
         const formats = [
             "EEE, dd MMM yyyy HH:mm:ss 'GMT'",
@@ -317,7 +313,6 @@ async function main() {
             })
             const feedMap = new Map(feeds.map(feed => [feed.id, feed]));
 
-            // updateのあるfeedのみidの重複を除いて取得
             const selectMap = updates.reduce((acc, update) => {
                 const existing = acc.find(item => item.id === update.id);
                 if (!existing) {
@@ -326,7 +321,6 @@ async function main() {
                 return acc;
             }, []);
 
-            // updateのあるfeedをfeedMapから取得し、last_retrievedを更新
             const latestUpdates = selectMap.map(update => {
                 const fullFeedData = feedMap.get(update.id);
                 if (fullFeedData) {
