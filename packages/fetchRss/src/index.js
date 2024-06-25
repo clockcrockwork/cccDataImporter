@@ -256,41 +256,52 @@ const authenticateUser = async () => {
         throw error;
     }
 };
-const parseForSupabase = (dateString) => {
-    try {
-        dateString = String(dateString).replace(/\s*\([^)]*\)/, '');
-        const formats = [
-            "EEE, dd MMM yyyy HH:mm:ss 'GMT'",
-            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-            "ddd, DD MMM YYYY HH:mm:ss",
-            "EEE MMM dd yyyy HH:mm:ss 'GMT'XXX",
-            "EEE, dd MMM yyyy HH:mm:ss 'GMT'XXX",
-            "EEE MMM dd yyyy HH:mm:ss 'GMT'XXXXX"
-        ];
-        
-        let parsedDate;
-        for (let formatString of formats) {
-            try {
-                parsedDate = parse(dateString, formatString);
-                break;
-            } catch (error) {
-                continue;
-            }
-        }
-        
-        if (!parsedDate) {
-            parsedDate = new Date(dateString);
-            if (isNaN(parsedDate.getTime())) {
-                throw new Error("Unsupported date format");
-            }
-        }
-        
-        const localTime = tzDate(parsedDate, timezone);
-        return format(localTime, "yyyy-MM-dd'T'HH:mm:ssXXX");
-    } catch (error) {
-        console.error('Invalid date format:', error.message);
-        return null;
+const parseForSupabase = (dateString, timezone = 'Asia/Tokyo') => {
+  try {
+    // 入力された日付文字列をログ出力（デバッグ用）
+    console.log('Input date string:', dateString);
+
+    // 括弧内の文字列を削除
+    dateString = String(dateString).replace(/\s*\([^)]*\)/, '');
+
+    const formats = [
+      "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+      "EEE, dd MMM yyyy HH:mm:ss 'GMT'",
+      "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+      "ddd, DD MMM YYYY HH:mm:ss",
+      "EEE MMM dd yyyy HH:mm:ss 'GMT'XXX",
+      "EEE, dd MMM yyyy HH:mm:ss 'GMT'XXX",
+      "EEE MMM dd yyyy HH:mm:ss 'GMT'XXXXX"
+    ];
+    
+    let parsedDate;
+    for (let formatString of formats) {
+      try {
+        parsedDate = parse(dateString, formatString);
+        break;
+      } catch (error) {
+        continue;
+      }
     }
+    
+    if (!parsedDate) {
+      parsedDate = new Date(dateString);
+      if (isNaN(parsedDate.getTime())) {
+        throw new Error("Unsupported date format");
+      }
+    }
+    
+    const localTime = tzDate(parsedDate, timezone);
+    const formattedDate = format(localTime, "yyyy-MM-dd'T'HH:mm:ssXXX");
+
+    // 変換後の日付文字列をログ出力（デバッグ用）
+    console.log('Formatted date:', formattedDate);
+
+    return formattedDate;
+  } catch (error) {
+    console.error('Invalid date format:', error.message);
+    return null;
+  }
 };
 const parseDate = (dateString, timezone = 'UTC') => {
     try {
