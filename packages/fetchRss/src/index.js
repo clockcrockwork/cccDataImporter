@@ -282,24 +282,28 @@ const parseForSupabase = (dateString, timezone = 'Asia/Tokyo') => {
     
     let parsedDate;
     for (let formatString of formats) {
-      try {
-        parsedDate = parse(dateString, formatString);
-        break;
-      } catch (error) {
-        continue;
-      }
+        try {
+            parsedDate = parse(dateString, formatString);
+            break;
+        } catch (error) {
+            continue;
+        }
     }
+
+    console.log('parseForSupabase-parsedDate:', parsedDate);
     
     if (!parsedDate) {
-      parsedDate = new Date(dateString);
-      if (isNaN(parsedDate.getTime())) {
-        throw new Error("Unsupported date format");
-      }
+        parsedDate = new Date(dateString);
+        if (isNaN(parsedDate.getTime())) {
+            throw new Error("Unsupported date format");
+        }
     }
+
+    console.log('parseForSupabase-date:', parsedDate);
     
     const localTime = tzDate(parsedDate, timezone);
     const formattedDate = format(localTime, "yyyy-MM-dd'T'HH:mm:ssXXX");
-
+    console.log('parseForSupabase-date:', localTime);
     // 変換後の日付文字列をログ出力（デバッグ用）
     console.log('parseForSupabase-Formatted date:', formattedDate);
 
@@ -311,7 +315,9 @@ const parseForSupabase = (dateString, timezone = 'Asia/Tokyo') => {
 };
 const parseDate = (dateString, timezone = 'UTC') => {
     try {
+        console.log('Input date string:', dateString);
         dateString = String(dateString).replace(/\s*\([^)]*\)/, '');
+        console.log('Input date string-format:', dateString);
         const formats = [
             "EEE, dd MMM yyyy HH:mm:ss 'GMT'",
             "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
@@ -330,6 +336,8 @@ const parseDate = (dateString, timezone = 'UTC') => {
                 continue;
             }
         }
+
+        console.log('parseDate-parsedDate:', parsedDate);
         
         if (!parsedDate) {
             parsedDate = new Date(dateString);
@@ -337,6 +345,8 @@ const parseDate = (dateString, timezone = 'UTC') => {
                 throw new Error("Unsupported date format");
             }
         }
+
+        console.log('parseDate-date:', parsedDate);
         
         const localTime = tzDate(parsedDate, timezone);
         console.log('parseDate-date:', localTime);
