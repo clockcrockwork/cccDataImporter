@@ -302,7 +302,11 @@ const parseForSupabase = (dateString, timezone = 'Asia/Tokyo') => {
         const localTime = tzDate(parsedDate, timezone);
         console.log('parseDate-localTime:', localTime);
         
-        const formattedDate = format(localTime, "yyyy-MM-dd'T'HH:mm:ssXXX");
+        const formattedDate = format({
+            date: localTime,
+            format: "yyyy-MM-dd'T'HH:mm:ssXXX",
+            timezone: timezone
+        });
         console.log('parseDate-Formatted date:', formattedDate);
         
         return formattedDate;
@@ -349,7 +353,11 @@ const parseDate = (dateString, timezone = 'Asia/Tokyo') => {
         const localTime = tzDate(parsedDate, timezone);
         console.log('parseDate-localTime:', localTime);
         
-        const formattedDate = format(localTime, 'yyyy-MM-dd HH:mm:ssXXX');
+        const formattedDate = format({
+            date: localTime,
+            format: "yyyy-MM-dd'T'HH:mm:ssXXX",
+            timezone: timezone
+        });
         console.log('parseDate-Formatted date:', formattedDate);
         
         return formattedDate;
