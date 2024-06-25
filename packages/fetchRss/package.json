@@ -12,7 +12,6 @@
     "@formkit/tempo": "^0.1.1",
     "@supabase/supabase-js": "^2.43.4",
     "dotenv": "^16.4.5",
-    "got": "^14.4.1",
     "html-entities": "^2.5.2",
     "node-fetch": "^3.3.2",
     "rss-parser": "^3.13.0",
