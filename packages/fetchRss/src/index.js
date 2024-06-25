@@ -292,7 +292,7 @@ const parseForSupabase = (dateString) => {
         return null;
     }
 };
-const parseDate = (dateString) => {
+const parseDate = (dateString, timezone = 'UTC') => {
     try {
         dateString = String(dateString).replace(/\s*\([^)]*\)/, '');
         const formats = [
