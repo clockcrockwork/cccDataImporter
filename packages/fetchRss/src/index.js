@@ -295,7 +295,7 @@ const parseForSupabase = (dateString, timezone = 'Asia/Tokyo') => {
     const formattedDate = format(localTime, "yyyy-MM-dd'T'HH:mm:ssXXX");
 
     // 変換後の日付文字列をログ出力（デバッグ用）
-    console.log('Formatted date:', formattedDate);
+    console.log('parseForSupabase-Formatted date:', formattedDate);
 
     return formattedDate;
   } catch (error) {
@@ -333,6 +333,8 @@ const parseDate = (dateString, timezone = 'UTC') => {
         }
         
         const localTime = tzDate(parsedDate, timezone);
+        console.log('parseDate-date:', localTime);
+        console.log('parseDate-Formatted date:', format(localTime, "yyyy-MM-dd'T'HH:mm:ssXXX"));
         return format(localTime, "yyyy-MM-dd HH:mm:ssXXX");
     } catch (error) {
         console.error('Invalid date format:', error.message);
