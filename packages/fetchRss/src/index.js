@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-import Parser from 'rss-parser';
+// import Parser from 'rss-parser';
 import { parse, format, tzDate, isAfter } from "@formkit/tempo";
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -17,7 +17,7 @@ if (!process.env.GITHUB_ACTIONS) {
 }
 
 const timezone = 'Asia/Tokyo';
-const parser = new Parser();
+// const parser = new Parser();
 const processedUrls = new Set();
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -256,37 +256,71 @@ const authenticateUser = async () => {
         throw error;
     }
 };
-const parseDate = (dateString) => {
+const parseForSupabase = (dateString) => {
     try {
-        dateString = String(dateString);
-
-        dateString = dateString.replace(/\s*\([^)]*\)/, '');
+        dateString = String(dateString).replace(/\s*\([^)]*\)/, '');
         const formats = [
             "EEE, dd MMM yyyy HH:mm:ss 'GMT'",
-            "yyyy-MM-dd HH:mm:ssXXX",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
             "ddd, DD MMM YYYY HH:mm:ss",
             "EEE MMM dd yyyy HH:mm:ss 'GMT'XXX",
             "EEE, dd MMM yyyy HH:mm:ss 'GMT'XXX",
             "EEE MMM dd yyyy HH:mm:ss 'GMT'XXXXX"
         ];
-
+        
         let parsedDate;
         for (let formatString of formats) {
             try {
-                parsedDate = parse(dateString, formatString, { timezone: "UTC" });
+                parsedDate = parse(dateString, formatString);
                 break;
             } catch (error) {
                 continue;
             }
         }
-
+        
         if (!parsedDate) {
             parsedDate = new Date(dateString);
             if (isNaN(parsedDate.getTime())) {
                 throw new Error("Unsupported date format");
             }
         }
-
+        
+        const localTime = tzDate(parsedDate, timezone);
+        return format(localTime, "yyyy-MM-dd'T'HH:mm:ssXXX");
+    } catch (error) {
+        console.error('Invalid date format:', error.message);
+        return null;
+    }
+};
+const parseDate = (dateString) => {
+    try {
+        dateString = String(dateString).replace(/\s*\([^)]*\)/, '');
+        const formats = [
+            "EEE, dd MMM yyyy HH:mm:ss 'GMT'",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+            "ddd, DD MMM YYYY HH:mm:ss",
+            "EEE MMM dd yyyy HH:mm:ss 'GMT'XXX",
+            "EEE, dd MMM yyyy HH:mm:ss 'GMT'XXX",
+            "EEE MMM dd yyyy HH:mm:ss 'GMT'XXXXX"
+        ];
+        
+        let parsedDate;
+        for (let formatString of formats) {
+            try {
+                parsedDate = parse(dateString, formatString);
+                break;
+            } catch (error) {
+                continue;
+            }
+        }
+        
+        if (!parsedDate) {
+            parsedDate = new Date(dateString);
+            if (isNaN(parsedDate.getTime())) {
+                throw new Error("Unsupported date format");
+            }
+        }
+        
         const localTime = tzDate(parsedDate, timezone);
         return format(localTime, "yyyy-MM-dd HH:mm:ssXXX");
     } catch (error) {
@@ -307,10 +341,7 @@ async function main() {
         const notifications = results.flatMap(result => result.notifications);
         // 現在の日時で更新
         if (updates.length > 0) {
-            const currentDateTimeStr = format({
-                date: currentDateTime,
-                format: "ddd, DD MMM YYYY HH:mm:ss ZZ"
-            })
+            const currentDateTimeStr = parseForSupabase(currentDateTime);
             const feedMap = new Map(feeds.map(feed => [feed.id, feed]));
 
             const selectMap = updates.reduce((acc, update) => {
