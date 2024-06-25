@@ -274,11 +274,11 @@ const parseForSupabase = (dateString, timezone = 'Asia/Tokyo') => {
         if (isNaN(parsedDate.getTime())) {
             const formats = [
                 "EEE, dd MMM yyyy HH:mm:ss GMT",
-                "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+                "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
                 "ddd, DD MMM YYYY HH:mm:ss",
-                "EEE MMM dd yyyy HH:mm:ss GMTXXX",
-                "EEE, dd MMM yyyy HH:mm:ss GMTXXX",
-                "EEE MMM dd yyyy HH:mm:ss GMTXXXXX"
+                "EEE MMM dd yyyy HH:mm:ss GMTZZ",
+                "EEE, dd MMM yyyy HH:mm:ss GMTZZ",
+                "EEE MMM dd yyyy HH:mm:ss GMTZZ"
             ];
             
             for (let formatString of formats) {
@@ -304,7 +304,7 @@ const parseForSupabase = (dateString, timezone = 'Asia/Tokyo') => {
         
         const formattedDate = format({
             date: localTime,
-            format: "yyyy-MM-ddTHH:mm:ssXXX",
+            format: "yyyy-MM-ddTHH:mm:ssZZ",
             timezone: timezone
         });
         console.log('parseDate-Formatted date:', formattedDate);
@@ -327,9 +327,9 @@ const parseDate = (dateString, timezone = 'Asia/Tokyo') => {
                 "EEE, dd MMM yyyy HH:mm:ss GMT",
                 "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
                 "ddd, DD MMM YYYY HH:mm:ss",
-                "EEE MMM dd yyyy HH:mm:ss GMTXXX",
-                "EEE, dd MMM yyyy HH:mm:ss GMTXXX",
-                "EEE MMM dd yyyy HH:mm:ss GMTXXXXX"
+                "EEE MMM dd yyyy HH:mm:ss GMTZZ",
+                "EEE, dd MMM yyyy HH:mm:ss GMTZZ",
+                "EEE MMM dd yyyy HH:mm:ss GMTZZ"
             ];
             
             for (let formatString of formats) {
@@ -355,7 +355,7 @@ const parseDate = (dateString, timezone = 'Asia/Tokyo') => {
         
         const formattedDate = format({
             date: localTime,
-            format: "yyyy-MM-ddTHH:mm:ssXXX",
+            format: "yyyy-MM-ddTHH:mm:ssZZ",
             timezone: timezone
         });
         console.log('parseDate-Formatted date:', formattedDate);
