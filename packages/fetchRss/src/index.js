@@ -102,7 +102,7 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
                     title: article.title,
                     description: article.contentSnippet,
                     url: article.link,
-                    timestamp: format(tzDate(article.date_published, 'UTC'), "yyyy-MM-dd'T'HH:mm:ssXXX", { timeZone: 'UTC' }),
+                    timestamp: format(tzDate(article.date_published, 'UTC'), "YYYY-MM-dd'T'HH:mm:ssXXX", { timeZone: 'UTC' }),
                 }]
             };
         }
@@ -273,12 +273,12 @@ const parseForSupabase = (dateString, timezone = 'Asia/Tokyo') => {
         let parsedDate = new Date(dateString);
         if (isNaN(parsedDate.getTime())) {
             const formats = [
-                "EEE, dd MMM yyyy HH:mm:ss GMT",
-                "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
+                "MMM, dd MMM YYYY HH:mm:ss GMT",
+                "YYYY-MM-dd'T'HH:mm:ssZZ",
                 "ddd, DD MMM YYYY HH:mm:ss",
-                "EEE MMM dd yyyy HH:mm:ss GMTZZ",
-                "EEE, dd MMM yyyy HH:mm:ss GMTZZ",
-                "EEE MMM dd yyyy HH:mm:ss GMTZZ"
+                "MMM MMM dd YYYY HH:mm:ss GMTZZ",
+                "MMM, dd MMM YYYY HH:mm:ss GMTZZ",
+                "MMM MMM dd YYYY HH:mm:ss GMTZZ"
             ];
             
             for (let formatString of formats) {
@@ -304,7 +304,7 @@ const parseForSupabase = (dateString, timezone = 'Asia/Tokyo') => {
         
         const formattedDate = format({
             date: localTime,
-            format: "yyyy-MM-ddTHH:mm:ssZZ",
+            format: "YYYY-M-DTHH:mm:ssZZ",
             timezone: timezone
         });
         console.log('parseDate-Formatted date:', formattedDate);
@@ -324,12 +324,12 @@ const parseDate = (dateString, timezone = 'Asia/Tokyo') => {
         let parsedDate = new Date(dateString);
         if (isNaN(parsedDate.getTime())) {
             const formats = [
-                "EEE, dd MMM yyyy HH:mm:ss GMT",
-                "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
+                "MMM, dd MMM YYYY HH:mm:ss GMT",
+                "YYYY-MM-dd'T'HH:mm:ssZZ",
                 "ddd, DD MMM YYYY HH:mm:ss",
-                "EEE MMM dd yyyy HH:mm:ss GMTZZ",
-                "EEE, dd MMM yyyy HH:mm:ss GMTZZ",
-                "EEE MMM dd yyyy HH:mm:ss GMTZZ"
+                "MMM MMM dd YYYY HH:mm:ss GMTZZ",
+                "MMM, dd MMM YYYY HH:mm:ss GMTZZ",
+                "MMM MMM dd YYYY HH:mm:ss GMTZZ"
             ];
             
             for (let formatString of formats) {
@@ -355,7 +355,7 @@ const parseDate = (dateString, timezone = 'Asia/Tokyo') => {
         
         const formattedDate = format({
             date: localTime,
-            format: "yyyy-MM-ddTHH:mm:ssZZ",
+            format: "YYYY-M-DTHH:mm:ssZZ",
             timezone: timezone
         });
         console.log('parseDate-Formatted date:', formattedDate);
