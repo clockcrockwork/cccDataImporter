@@ -196,50 +196,6 @@ async function processFeeds(feeds, concurrencyLimit = 5) {
   return results;
 }
 
-async function processNanoFeeds(feeds)
-{
-    const startTime = Date.now();
-    const results = [];
-
-    // feedsからURLの配列を取得
-    const feedUrls = feeds.map(feed => feed.url);
-
-    // フィードの取得
-    const items = await nanofeed.fetch(feedUrls);
-    const endTime = Date.now();
-    console.log(`step: processNanoFeeds, duration: ${endTime - startTime}ms`);
-
-    // フィードの処理
-    for (let i = 0; i < items.length; i++) {
-        const feed = feeds[i];
-        const feedItems = items[i];
-        const lastRetrieved = feed.last_retrieved ? tzDate(feed.last_retrieved, timezone) : null;
-
-        const newArticles = feedItems.filter(item => isAfter(parseDate(item.date), parseDate(lastRetrieved)));
-        if (newArticles.length === 0) continue;
-
-        const latestArticle = newArticles.reduce((latest, article) => 
-            parseDate(article.date) > parseDate(latest.date) ? article : latest, newArticles[0]);
-        
-        if (feed['hook_type'] === 'thread-normal') {
-            let imageUrl = latestArticle.image;
-            if (imageUrl) {
-                await processImage(imageUrl, feed['webhook']);
-            } else {
-                console.log(`No valid image found for feed: ${feed.id}`);
-            }
-        }
-
-        results.push({
-            feedId: feed.id,
-            updates: newArticles.map(article => ({ id: feed.id, 'last_retrieved': article.date })),
-            notifications: newArticles.map(article => ({ webhookUrl: feed['webhook'], article, webhookType: feed['hook_type'], feedType: feed['feed_type'] }))
-        });
-    }
-
-    return results;
-}
-
 async function processFeed(feed, errors) {
   const startTime = Date.now();
   try {
@@ -349,8 +305,7 @@ async function main() {
     try {
         const accessToken = await authenticateUser();
         const feeds = await getRssFeeds();
-        // const results = await processFeeds(feeds);
-        const results = await processNanoFeeds(feeds);
+        const results = await processFeeds(feeds);
 
         const updates = results.flatMap(result => result.updates);
         const notifications = results.flatMap(result => result.notifications);
