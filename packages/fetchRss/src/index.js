@@ -186,6 +186,8 @@ async function processFeed(feed, errors) {
                 }
                 return imageUrl !== null;
             });
+
+            console.log(`Found ${articlesWithImages.length} articles with images for feed: ${feed.id}`);
         
             if (articlesWithImages.length > 0) {
                 
