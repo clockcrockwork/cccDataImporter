@@ -59,28 +59,13 @@ function createErrorArray() {
 async function checkForNewArticles(feedUrl, lastRetrieved) {
     try 
     {
-        const startTime = Date.now();
-        console.log(`Checking for new articles from feed: ${feedUrl}`);
-        const fetchStartTime = Date.now();
         const feed = await fetch(feedUrl);
         const feedData = await feed.json();
-        const fetchEndTime = Date.now();
-        console.log(`Fetching and parsing feed took ${fetchEndTime - fetchStartTime}ms`);
-
-        const filterStartTime = Date.now();
-        // const newArticles = feedData.items.filter(item => parseDate(item.date_published) > parseDate(lastRetrieved));
+        
         const newArticles = feedData.items.filter(item => {
             const itemDate = parseDate(item.date_published);
-            console.log('Item Date:', itemDate, 'Last Retrieved:', parseDate(lastRetrieved));
-            console.log(`parse-before itemDate: ${item.date_published} lastRetrieved: ${lastRetrieved}`);
             return itemDate > parseDate(lastRetrieved);
           });
-        const filterEndTime = Date.now();
-        console.log(`Filtering new articles took ${filterEndTime - filterStartTime}ms`);
-
-        const endTime = Date.now();
-        console.log(`Total time for checking new articles: ${endTime - startTime}ms`);
-
         return newArticles;
     }
     catch (error) {
