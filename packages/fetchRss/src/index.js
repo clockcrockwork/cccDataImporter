@@ -179,11 +179,8 @@ async function processFeed(feed, errors) {
         if (feed['hook_type'] === 'thread-normal') {
 
             const articlesWithImages = newArticles.filter(article => {
-                let imageUrl = article.enclosure?.url;
-                if (!imageUrl) {
-                    const imgMatch = article.content?.match(/<img[^>]+src="([^">]+)"/);
-                    imageUrl = imgMatch ? imgMatch[1] : null;
-                }
+                const imgMatch = article.content_html?.match(/<img[^>]+src="([^">]+)"/);
+                const imageUrl = imgMatch ? imgMatch[1] : null;
                 return imageUrl !== null;
             });
 
@@ -194,7 +191,7 @@ async function processFeed(feed, errors) {
                 const latestArticleWithImage = articlesWithImages.reduce((latest, article) => 
                     parseDate(article.date_published) > parseDate(latest.date_published) ? article : latest, articlesWithImages[0]);
             
-                const imageUrl = latestArticleWithImage.enclosure?.url || latestArticleWithImage.content.match(/<img[^>]+src="([^">]+)"/)[1];
+                const imageUrl = latestArticleWithImage.content_html.match(/<img[^>]+src="([^">]+)"/)[1];
             
                 if (imageUrl) {
                     await processImage(imageUrl, feed['webhook']);
