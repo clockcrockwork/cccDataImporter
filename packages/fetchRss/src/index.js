@@ -200,42 +200,55 @@ async function processFeeds(feeds, concurrencyLimit = 5) {
 }
 
 async function processFeed(feed, errors) {
-  const startTime = Date.now();
-  try {
+    const startTime = Date.now();
+    try {
         const lastRetrieved = feed.last_retrieved ? tzDate(feed.last_retrieved, timezone) : null;
 
         const newArticles = await checkForNewArticles(feed.url, lastRetrieved);
         if (newArticles.length === 0) return { feedId: feed.id, updates: [], notifications: [] };
         console.log(`Found ${newArticles.length} new articles for feed: ${feed.id}`);
-        const latestArticle = newArticles.reduce((latest, article) => 
-            parseDate(article.date_published) > parseDate(latest.date_published) ? article : latest, newArticles[0]);
 
         if (feed['hook_type'] === 'thread-normal') {
-            let imageUrl = latestArticle.enclosure?.url;
-            if (!imageUrl) {
-                const imgMatch = latestArticle.content?.match(/<img[^>]+src="([^">]+)"/);
-                imageUrl = imgMatch ? imgMatch[1] : null;
+
+            const articlesWithImages = newArticles.filter(article => {
+                let imageUrl = article.enclosure?.url;
+                if (!imageUrl) {
+                    const imgMatch = article.content?.match(/<img[^>]+src="([^">]+)"/);
+                    imageUrl = imgMatch ? imgMatch[1] : null;
+                }
+                return imageUrl !== null;
+            });
+        
+            if (articlesWithImages.length === 0) {
+                console.log(`No articles with images found for feed: ${feed.id}`);
+                return { feedId: feed.id, updates: [], notifications: [] };
             }
+        
+            const latestArticleWithImage = articlesWithImages.reduce((latest, article) => 
+              parseDate(article.date_published) > parseDate(latest.date_published) ? article : latest, articlesWithImages[0]);
+        
+            const imageUrl = latestArticleWithImage.enclosure?.url || latestArticleWithImage.content.match(/<img[^>]+src="([^">]+)"/)[1];
+        
             if (imageUrl) {
                 await processImage(imageUrl, feed['webhook']);
             } else {
-                console.log(`No valid image found for feed: ${feed.id}`);
+                console.log(`Failed to retrieve a valid image for the latest article with image for feed: ${feed.id}`);
             }
         }
 
-      return {
-          feedId: feed.id,
-          updates: newArticles.map(article => ({ id: feed.id, 'last_retrieved': article.date_published })),
-          notifications: newArticles.map(article => ({ webhookUrl: feed['webhook'], article, webhookType: feed['hook_type'], feedType: feed['feed_type'] }))
-      };
-  } catch (error) {
-      errors.addError(error);
-      return { feedId: feed.id, updates: [], notifications: [] };
-  }
-  finally {
-      const endTime = Date.now();
-      console.log(`step: processFeed, feedId: ${feed.id}, duration: ${endTime - startTime}ms`);
-  }
+        return {
+            feedId: feed.id,
+            updates: newArticles.map(article => ({ id: feed.id, 'last_retrieved': article.date_published })),
+            notifications: newArticles.map(article => ({ webhookUrl: feed['webhook'], article, webhookType: feed['hook_type'], feedType: feed['feed_type'] }))
+        };
+    } catch (error) {
+        errors.addError(error);
+        return { feedId: feed.id, updates: [], notifications: [] };
+    }
+    finally {
+        const endTime = Date.now();
+        console.log(`step: processFeed, feedId: ${feed.id}, duration: ${endTime - startTime}ms`);
+    }
 }
 
 
