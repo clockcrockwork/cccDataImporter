@@ -129,15 +129,10 @@ async function processImage(imageUrl, imageName) {
         return;
     }
 
-    const startTime = Date.now();
     console.log('Processing image:', imageUrl);
 
     try {
-        const fetchStartTime = Date.now();
         const response = await fetch(imageUrl);
-        const fetchEndTime = Date.now();
-        console.log(`Fetching image took ${fetchEndTime - fetchStartTime}ms`);
-
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -147,7 +142,6 @@ async function processImage(imageUrl, imageName) {
             throw new Error('The URL does not point to a valid image');
         }
 
-        const transformStartTime = Date.now();
         const transform = sharp()
             .resize(400)
             .png({ quality: 60, compressionLevel: 9 });
@@ -156,10 +150,6 @@ async function processImage(imageUrl, imageName) {
             response.body,
             transform
         );
-        const transformEndTime = Date.now();
-        console.log(`Transforming image took ${transformEndTime - transformStartTime}ms`);
-
-        const uploadStartTime = Date.now();
         const { data, error } = await supabase.storage
             .from(SUPABASE_STORAGE_BUCKET_NAME)
             .upload(`${SUPABASE_STORAGE_FOLDER_NAME}/${imageName}.png`, processedImageBuffer, {
@@ -167,17 +157,11 @@ async function processImage(imageUrl, imageName) {
                 upsert: true,
                 contentType: 'image/png'
             });
-        const uploadEndTime = Date.now();
-        console.log(`Uploading image took ${uploadEndTime - uploadStartTime}ms`);
-
         if (error) {
             throw error;
         }
 
         processedUrls.add(imageUrl);
-
-        const endTime = Date.now();
-        console.log(`Image processed and uploaded successfully in ${endTime - startTime}ms:`, data);
     } catch (error) {
         console.error('Error processing image:', error);
     }
@@ -200,7 +184,6 @@ async function processFeeds(feeds, concurrencyLimit = 5) {
 }
 
 async function processFeed(feed, errors) {
-    const startTime = Date.now();
     try {
         const lastRetrieved = feed.last_retrieved ? tzDate(feed.last_retrieved, timezone) : null;
 
@@ -219,21 +202,20 @@ async function processFeed(feed, errors) {
                 return imageUrl !== null;
             });
         
-            if (articlesWithImages.length === 0) {
-                console.log(`No articles with images found for feed: ${feed.id}`);
-                return { feedId: feed.id, updates: [], notifications: [] };
+            if (articlesWithImages.length > 0) {
+                
+                const latestArticleWithImage = articlesWithImages.reduce((latest, article) => 
+                    parseDate(article.date_published) > parseDate(latest.date_published) ? article : latest, articlesWithImages[0]);
+            
+                const imageUrl = latestArticleWithImage.enclosure?.url || latestArticleWithImage.content.match(/<img[^>]+src="([^">]+)"/)[1];
+            
+                if (imageUrl) {
+                    await processImage(imageUrl, feed['webhook']);
+                } else {
+                    console.log(`Failed to retrieve a valid image for the latest article with image for feed: ${feed.id}`);
+                }
             }
         
-            const latestArticleWithImage = articlesWithImages.reduce((latest, article) => 
-              parseDate(article.date_published) > parseDate(latest.date_published) ? article : latest, articlesWithImages[0]);
-        
-            const imageUrl = latestArticleWithImage.enclosure?.url || latestArticleWithImage.content.match(/<img[^>]+src="([^">]+)"/)[1];
-        
-            if (imageUrl) {
-                await processImage(imageUrl, feed['webhook']);
-            } else {
-                console.log(`Failed to retrieve a valid image for the latest article with image for feed: ${feed.id}`);
-            }
         }
 
         return {
@@ -244,10 +226,6 @@ async function processFeed(feed, errors) {
     } catch (error) {
         errors.addError(error);
         return { feedId: feed.id, updates: [], notifications: [] };
-    }
-    finally {
-        const endTime = Date.now();
-        console.log(`step: processFeed, feedId: ${feed.id}, duration: ${endTime - startTime}ms`);
     }
 }
 
@@ -279,10 +257,7 @@ const authenticateUser = async () => {
 
 const parseForSupabase = (dateString, timezone = 'Asia/Tokyo') => {
     try {
-        console.log('Input date string:', dateString);
         dateString = String(dateString).replace(/\s*\([^)]*\)/, '');
-        console.log('Input date string-format:', dateString);
-        
         let parsedDate = new Date(dateString);
         if (isNaN(parsedDate.getTime())) {
             const formats = [
@@ -304,24 +279,15 @@ const parseForSupabase = (dateString, timezone = 'Asia/Tokyo') => {
             }
         }
 
-        console.log('parseDate-parsedDate:', parsedDate);
-        
         if (isNaN(parsedDate.getTime())) {
             throw new Error("Unsupported date format");
         }
-
-        console.log('parseDate-date:', parsedDate);
-        
         const localTime = tzDate(parsedDate, timezone);
-        console.log('parseDate-localTime:', localTime);
-        
         const formattedDate = format({
             date: localTime,
             format: "YYYY-M-DTHH:mm:ssZZ",
             timezone: timezone
         });
-        console.log('parseDate-Formatted date:', formattedDate);
-        
         return formattedDate;
     } catch (error) {
         console.error('Invalid date format:', error.message);
@@ -330,10 +296,8 @@ const parseForSupabase = (dateString, timezone = 'Asia/Tokyo') => {
 };
 const parseDate = (dateString, timezone = 'Asia/Tokyo') => {
     try {
-        console.log('Input date string:', dateString);
         dateString = String(dateString).replace(/\s*\([^)]*\)/, '');
-        console.log('Input date string-format:', dateString);
-        
+
         let parsedDate = new Date(dateString);
         if (isNaN(parsedDate.getTime())) {
             const formats = [
@@ -354,25 +318,15 @@ const parseDate = (dateString, timezone = 'Asia/Tokyo') => {
                 }
             }
         }
-
-        console.log('parseDate-parsedDate:', parsedDate);
-        
         if (isNaN(parsedDate.getTime())) {
             throw new Error("Unsupported date format");
         }
-
-        console.log('parseDate-date:', parsedDate);
-        
         const localTime = tzDate(parsedDate, timezone);
-        console.log('parseDate-localTime:', localTime);
-        
         const formattedDate = format({
             date: localTime,
             format: "YYYY-M-DTHH:mm:ssZZ",
             timezone: timezone
         });
-        console.log('parseDate-Formatted date:', formattedDate);
-        
         return formattedDate;
     } catch (error) {
         console.error('Invalid date format:', error.message);
