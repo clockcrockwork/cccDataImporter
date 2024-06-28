@@ -118,11 +118,13 @@ async function processImage(imageUrl, imageName) {
 
     try {
         const response = await fetch(imageUrl);
+        console.log('response:', response);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const contentType = response.headers.get('content-type');
+        console.log('contentType:', contentType);
         if (!contentType || contentType.startsWith('image/') === false) {
             throw new Error('The URL does not point to a valid image');
         }
@@ -142,6 +144,7 @@ async function processImage(imageUrl, imageName) {
                 upsert: true,
                 contentType: 'image/png'
             });
+        console.log('data:', data);
         if (error) {
             throw error;
         }
