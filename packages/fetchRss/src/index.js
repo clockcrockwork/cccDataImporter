@@ -1,13 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-// import Parser from 'rss-parser';
 import { parse, format, tzDate, isAfter } from "@formkit/tempo";
 import path from 'path';
 import { fileURLToPath } from 'url';
 import sharp from 'sharp';
 import { decode } from 'html-entities';
 import fetch from 'node-fetch';
-import { pipeline } from 'stream/promises';
+// import { pipeline } from 'stream/promises';
+import { pipeline } from 'stream';
+import { promisify } from 'util';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,8 +18,8 @@ if (!process.env.GITHUB_ACTIONS) {
 }
 
 const timezone = 'Asia/Tokyo';
-// const parser = new Parser();
 const processedUrls = new Set();
+const streamPipeline = promisify(pipeline);
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
@@ -129,37 +130,30 @@ async function processImage(imageUrl, imageName) {
         return;
     }
 
-    const startTime = Date.now();
     console.log('Processing image:', imageUrl);
 
     try {
-        const fetchStartTime = Date.now();
         const response = await fetch(imageUrl);
-        const fetchEndTime = Date.now();
-        console.log(`Fetching image took ${fetchEndTime - fetchStartTime}ms`);
-
+        console.log('response:', response);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const contentType = response.headers.get('content-type');
-        if (!contentType || contentType.startsWith('image/') === false) {
+        console.log('contentType:', contentType);
+        if (!contentType || !contentType.startsWith('image/')) {
             throw new Error('The URL does not point to a valid image');
         }
 
-        const transformStartTime = Date.now();
-        const transform = sharp()
+        // Read the response into a buffer
+        const imageBuffer = await response.buffer();
+
+        // Process the image with sharp
+        const processedImageBuffer = await sharp(imageBuffer)
             .resize(400)
-            .png({ quality: 60, compressionLevel: 9 });
+            .png({ quality: 60, compressionLevel: 9 })
+            .toBuffer();
 
-        const processedImageBuffer = await pipeline(
-            response.body,
-            transform
-        );
-        const transformEndTime = Date.now();
-        console.log(`Transforming image took ${transformEndTime - transformStartTime}ms`);
-
-        const uploadStartTime = Date.now();
         const { data, error } = await supabase.storage
             .from(SUPABASE_STORAGE_BUCKET_NAME)
             .upload(`${SUPABASE_STORAGE_FOLDER_NAME}/${imageName}.png`, processedImageBuffer, {
@@ -167,17 +161,13 @@ async function processImage(imageUrl, imageName) {
                 upsert: true,
                 contentType: 'image/png'
             });
-        const uploadEndTime = Date.now();
-        console.log(`Uploading image took ${uploadEndTime - uploadStartTime}ms`);
 
+        console.log('data:', data);
         if (error) {
             throw error;
         }
 
         processedUrls.add(imageUrl);
-
-        const endTime = Date.now();
-        console.log(`Image processed and uploaded successfully in ${endTime - startTime}ms:`, data);
     } catch (error) {
         console.error('Error processing image:', error);
     }
