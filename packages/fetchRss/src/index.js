@@ -292,34 +292,34 @@ async function main() {
         const updates = results.flatMap(result => result.updates);
         const notifications = results.flatMap(result => result.notifications);
         // 現在の日時で更新
-        // if (updates.length > 0) {
-        //     const currentDateTimeStr = parseForSupabase(currentDateTime);
-        //     const feedMap = new Map(feeds.map(feed => [feed.id, feed]));
+        if (updates.length > 0) {
+            const currentDateTimeStr = parseForSupabase(currentDateTime);
+            const feedMap = new Map(feeds.map(feed => [feed.id, feed]));
 
-        //     const selectMap = updates.reduce((acc, update) => {
-        //         const existing = acc.find(item => item.id === update.id);
-        //         if (!existing) {
-        //             acc.push(update);
-        //         }
-        //         return acc;
-        //     }, []);
+            const selectMap = updates.reduce((acc, update) => {
+                const existing = acc.find(item => item.id === update.id);
+                if (!existing) {
+                    acc.push(update);
+                }
+                return acc;
+            }, []);
 
-        //     const latestUpdates = selectMap.map(update => {
-        //         const fullFeedData = feedMap.get(update.id);
-        //         if (fullFeedData) {
-        //             return { ...fullFeedData, 'last_retrieved': currentDateTimeStr };
-        //         } else {
-        //             console.error('Full feed data not found for update id:', update.id);
-        //         }
-        //     });
+            const latestUpdates = selectMap.map(update => {
+                const fullFeedData = feedMap.get(update.id);
+                if (fullFeedData) {
+                    return { ...fullFeedData, 'last_retrieved': currentDateTimeStr };
+                } else {
+                    console.error('Full feed data not found for update id:', update.id);
+                }
+            });
 
-        //     console.log(`step: latestUpdates, latestUpdates: ${latestUpdates.length}`);
-        //     const { error } = await supabase.from(SUPABASE_FEED_TABLE_NAME).upsert(latestUpdates, { onConflict: 'id' }).select();
+            console.log(`step: latestUpdates, latestUpdates: ${latestUpdates.length}`);
+            const { error } = await supabase.from(SUPABASE_FEED_TABLE_NAME).upsert(latestUpdates, { onConflict: 'id' }).select();
 
-        //     if (error) {
-        //         throw error;
-        //     }
-        // }
+            if (error) {
+                throw error;
+            }
+        }
 
         if (notifications.length > 0) {
             const groupedNotifications = notifications.reduce((acc, { webhookUrl, article, webhookType, feedType }) => {
@@ -328,10 +328,6 @@ async function main() {
                 return acc;
             }, {});
             const notificationResults = await Promise.allSettled(Object.entries(groupedNotifications).map(([webhookUrl, articles]) => notifyDiscord(webhookUrl, articles.map(({ article }) => article), articles[0].webhookType, articles[0].feedType)));
-            // 成功したものをconsole.log
-            const successfulNotifications = notificationResults.filter(result => result.status === 'fulfilled').map(result => result.status === 'fulfilled' ? result.value : null);
-            console.log('successfulNotifications:');
-            console.log(successfulNotifications);
             const failedNotifications = notificationResults.filter(result => result.status === 'rejected').map(result => result.status === 'rejected' ? result.reason : null);
             if (failedNotifications.length > 0) {
                 throw new Error(`Failed notifications: ${failedNotifications.map(err => err.message).join('\n')}`);
