@@ -77,6 +77,8 @@ async function checkForNewArticles(feedUrl, lastRetrieved) {
 
 
 async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
+    console.log(`Notifying Discord for ${articles.length} articles`);
+
     const payloads = articles.map(article => {
         if (feedType === SUPABASE_FEED_TYPE_X) {
             return {
@@ -88,52 +90,52 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
                     title: article.title,
                     description: article.contentSnippet,
                     url: article.link,
-                    timestamp: format(tzDate(article.date_published, 'UTC'), "YYYY-MM-dd'T'HH:mm:ssXXX", { timeZone: 'UTC' }),
+                    timestamp: format(tzDate(article.date_published, 'UTC'), "yyyy-MM-dd'T'HH:mm:ssXXX", { timeZone: 'UTC' }),
                 }]
             };
         }
     });
-    
+
     const requests = payloads.map(payload => {
         const url = webhookType === 'thread-normal'
             ? `${FEED_PARENT_WEBHOOK_URL}?thread_id=${webhookUrl}`
             : webhookUrl;
-        
+
         return fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
+        }).then(response => {
+            if (!response.ok) {
+                throw new Error(`Failed to notify Discord: ${response.statusText}`);
+            }
+            return response.json();
+        }).catch(error => {
+            console.error(`Error notifying Discord: ${error.message}`);
+            throw error;
         });
     });
-    await Promise.allSettled(requests);
+
+    const results = await Promise.allSettled(requests);
+    return results;
 }
   
 async function processImage(imageUrl, imageName) {
     imageUrl = decode(imageUrl);
     if (processedUrls.has(imageUrl)) {
-        console.log(`Image already processed: ${imageUrl}`);
         return;
     }
-
-    console.log('Processing image:', imageUrl);
-
     try {
         const response = await fetch(imageUrl);
-        console.log('response:', response);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const contentType = response.headers.get('content-type');
-        console.log('contentType:', contentType);
         if (!contentType || !contentType.startsWith('image/')) {
             throw new Error('The URL does not point to a valid image');
         }
-
-        // Read the response into a buffer
         const imageBuffer = await response.buffer();
-
-        // Process the image with sharp
         const processedImageBuffer = await sharp(imageBuffer)
             .resize(400)
             .png({ quality: 60, compressionLevel: 9 })
@@ -146,7 +148,6 @@ async function processImage(imageUrl, imageName) {
                 upsert: true,
                 contentType: 'image/png'
             });
-        console.log('data:', data);
         if (error) {
             throw error;
         }
@@ -179,8 +180,7 @@ async function processFeed(feed, errors) {
 
         const newArticles = await checkForNewArticles(feed.url, lastRetrieved);
         if (newArticles.length === 0) return { feedId: feed.id, updates: [], notifications: [] };
-        console.log(`Found ${newArticles.length} new articles for feed: ${feed.id}`);
-
+        
         if (feed['hook_type'] === 'thread-normal') {
 
             const articlesWithImages = newArticles.filter(article => {
@@ -200,8 +200,6 @@ async function processFeed(feed, errors) {
             
                 if (imageUrl) {
                     await processImage(imageUrl, feed['webhook']);
-                } else {
-                    console.log(`Failed to retrieve a valid image for the latest article with image for feed: ${feed.id}`);
                 }
             }
         
@@ -243,46 +241,6 @@ const authenticateUser = async () => {
     }
 };
 
-
-const parseForSupabase = (dateString, timezone = 'Asia/Tokyo') => {
-    try {
-        dateString = String(dateString).replace(/\s*\([^)]*\)/, '');
-        let parsedDate = new Date(dateString);
-        if (isNaN(parsedDate.getTime())) {
-            const formats = [
-                "MMM, dd MMM YYYY HH:mm:ss GMT",
-                "YYYY-MM-dd'T'HH:mm:ssZZ",
-                "ddd, DD MMM YYYY HH:mm:ss",
-                "MMM MMM dd YYYY HH:mm:ss GMTZZ",
-                "MMM, dd MMM YYYY HH:mm:ss GMTZZ",
-                "MMM MMM dd YYYY HH:mm:ss GMTZZ"
-            ];
-            
-            for (let formatString of formats) {
-                try {
-                    parsedDate = parse(dateString, formatString);
-                    break;
-                } catch (error) {
-                    continue;
-                }
-            }
-        }
-
-        if (isNaN(parsedDate.getTime())) {
-            throw new Error("Unsupported date format");
-        }
-        const localTime = tzDate(parsedDate, timezone);
-        const formattedDate = format({
-            date: localTime,
-            format: "YYYY-M-DTHH:mm:ssZZ",
-            timezone: timezone
-        });
-        return formattedDate;
-    } catch (error) {
-        console.error('Invalid date format:', error.message);
-        return null;
-    }
-};
 const parseDate = (dateString, timezone = 'Asia/Tokyo') => {
     try {
         dateString = String(dateString).replace(/\s*\([^)]*\)/, '');
@@ -334,34 +292,34 @@ async function main() {
         const updates = results.flatMap(result => result.updates);
         const notifications = results.flatMap(result => result.notifications);
         // 現在の日時で更新
-        if (updates.length > 0) {
-            const currentDateTimeStr = parseForSupabase(currentDateTime);
-            const feedMap = new Map(feeds.map(feed => [feed.id, feed]));
+        // if (updates.length > 0) {
+        //     const currentDateTimeStr = parseForSupabase(currentDateTime);
+        //     const feedMap = new Map(feeds.map(feed => [feed.id, feed]));
 
-            const selectMap = updates.reduce((acc, update) => {
-                const existing = acc.find(item => item.id === update.id);
-                if (!existing) {
-                    acc.push(update);
-                }
-                return acc;
-            }, []);
+        //     const selectMap = updates.reduce((acc, update) => {
+        //         const existing = acc.find(item => item.id === update.id);
+        //         if (!existing) {
+        //             acc.push(update);
+        //         }
+        //         return acc;
+        //     }, []);
 
-            const latestUpdates = selectMap.map(update => {
-                const fullFeedData = feedMap.get(update.id);
-                if (fullFeedData) {
-                    return { ...fullFeedData, 'last_retrieved': currentDateTimeStr };
-                } else {
-                    console.error('Full feed data not found for update id:', update.id);
-                }
-            });
+        //     const latestUpdates = selectMap.map(update => {
+        //         const fullFeedData = feedMap.get(update.id);
+        //         if (fullFeedData) {
+        //             return { ...fullFeedData, 'last_retrieved': currentDateTimeStr };
+        //         } else {
+        //             console.error('Full feed data not found for update id:', update.id);
+        //         }
+        //     });
 
-            console.log(`step: latestUpdates, latestUpdates: ${latestUpdates.length}`);
-            const { error } = await supabase.from(SUPABASE_FEED_TABLE_NAME).upsert(latestUpdates, { onConflict: 'id' }).select();
+        //     console.log(`step: latestUpdates, latestUpdates: ${latestUpdates.length}`);
+        //     const { error } = await supabase.from(SUPABASE_FEED_TABLE_NAME).upsert(latestUpdates, { onConflict: 'id' }).select();
 
-            if (error) {
-                throw error;
-            }
-        }
+        //     if (error) {
+        //         throw error;
+        //     }
+        // }
 
         if (notifications.length > 0) {
             const groupedNotifications = notifications.reduce((acc, { webhookUrl, article, webhookType, feedType }) => {
@@ -370,6 +328,10 @@ async function main() {
                 return acc;
             }, {});
             const notificationResults = await Promise.allSettled(Object.entries(groupedNotifications).map(([webhookUrl, articles]) => notifyDiscord(webhookUrl, articles.map(({ article }) => article), articles[0].webhookType, articles[0].feedType)));
+            // 成功したものをconsole.log
+            const successfulNotifications = notificationResults.filter(result => result.status === 'fulfilled').map(result => result.status === 'fulfilled' ? result.value : null);
+            console.log('successfulNotifications:');
+            console.log(successfulNotifications);
             const failedNotifications = notificationResults.filter(result => result.status === 'rejected').map(result => result.status === 'rejected' ? result.reason : null);
             if (failedNotifications.length > 0) {
                 throw new Error(`Failed notifications: ${failedNotifications.map(err => err.message).join('\n')}`);
