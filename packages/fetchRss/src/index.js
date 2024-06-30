@@ -60,28 +60,13 @@ function createErrorArray() {
 async function checkForNewArticles(feedUrl, lastRetrieved) {
     try 
     {
-        const startTime = Date.now();
-        console.log(`Checking for new articles from feed: ${feedUrl}`);
-        const fetchStartTime = Date.now();
         const feed = await fetch(feedUrl);
         const feedData = await feed.json();
-        const fetchEndTime = Date.now();
-        console.log(`Fetching and parsing feed took ${fetchEndTime - fetchStartTime}ms`);
-
-        const filterStartTime = Date.now();
-        // const newArticles = feedData.items.filter(item => parseDate(item.date_published) > parseDate(lastRetrieved));
+        
         const newArticles = feedData.items.filter(item => {
             const itemDate = parseDate(item.date_published);
-            console.log('Item Date:', itemDate, 'Last Retrieved:', parseDate(lastRetrieved));
-            console.log(`parse-before itemDate: ${item.date_published} lastRetrieved: ${lastRetrieved}`);
             return itemDate > parseDate(lastRetrieved);
           });
-        const filterEndTime = Date.now();
-        console.log(`Filtering new articles took ${filterEndTime - filterStartTime}ms`);
-
-        const endTime = Date.now();
-        console.log(`Total time for checking new articles: ${endTime - startTime}ms`);
-
         return newArticles;
     }
     catch (error) {
@@ -103,7 +88,7 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
                     title: article.title,
                     description: article.contentSnippet,
                     url: article.link,
-                    timestamp: format(tzDate(article.date_published, 'UTC'), "yyyy-MM-dd'T'HH:mm:ssXXX", { timeZone: 'UTC' }),
+                    timestamp: format(tzDate(article.date_published, 'UTC'), "YYYY-MM-dd'T'HH:mm:ssXXX", { timeZone: 'UTC' }),
                 }]
             };
         }
@@ -161,7 +146,6 @@ async function processImage(imageUrl, imageName) {
                 upsert: true,
                 contentType: 'image/png'
             });
-
         console.log('data:', data);
         if (error) {
             throw error;
@@ -190,42 +174,48 @@ async function processFeeds(feeds, concurrencyLimit = 5) {
 }
 
 async function processFeed(feed, errors) {
-  const startTime = Date.now();
-  try {
+    try {
         const lastRetrieved = feed.last_retrieved ? tzDate(feed.last_retrieved, timezone) : null;
 
         const newArticles = await checkForNewArticles(feed.url, lastRetrieved);
         if (newArticles.length === 0) return { feedId: feed.id, updates: [], notifications: [] };
         console.log(`Found ${newArticles.length} new articles for feed: ${feed.id}`);
-        const latestArticle = newArticles.reduce((latest, article) => 
-            parseDate(article.date_published) > parseDate(latest.date_published) ? article : latest, newArticles[0]);
 
         if (feed['hook_type'] === 'thread-normal') {
-            let imageUrl = latestArticle.enclosure?.url;
-            if (!imageUrl) {
-                const imgMatch = latestArticle.content?.match(/<img[^>]+src="([^">]+)"/);
-                imageUrl = imgMatch ? imgMatch[1] : null;
+
+            const articlesWithImages = newArticles.filter(article => {
+                const imgMatch = article.content_html?.match(/<img[^>]+src="([^">]+)"/);
+                const imageUrl = imgMatch ? imgMatch[1] : null;
+                return imageUrl !== null;
+            });
+
+            console.log(`Found ${articlesWithImages.length} articles with images for feed: ${feed.id}`);
+        
+            if (articlesWithImages.length > 0) {
+                
+                const latestArticleWithImage = articlesWithImages.reduce((latest, article) => 
+                    parseDate(article.date_published) > parseDate(latest.date_published) ? article : latest, articlesWithImages[0]);
+            
+                const imageUrl = latestArticleWithImage.content_html.match(/<img[^>]+src="([^">]+)"/)[1];
+            
+                if (imageUrl) {
+                    await processImage(imageUrl, feed['webhook']);
+                } else {
+                    console.log(`Failed to retrieve a valid image for the latest article with image for feed: ${feed.id}`);
+                }
             }
-            if (imageUrl) {
-                await processImage(imageUrl, feed['webhook']);
-            } else {
-                console.log(`No valid image found for feed: ${feed.id}`);
-            }
+        
         }
 
-      return {
-          feedId: feed.id,
-          updates: newArticles.map(article => ({ id: feed.id, 'last_retrieved': article.date_published })),
-          notifications: newArticles.map(article => ({ webhookUrl: feed['webhook'], article, webhookType: feed['hook_type'], feedType: feed['feed_type'] }))
-      };
-  } catch (error) {
-      errors.addError(error);
-      return { feedId: feed.id, updates: [], notifications: [] };
-  }
-  finally {
-      const endTime = Date.now();
-      console.log(`step: processFeed, feedId: ${feed.id}, duration: ${endTime - startTime}ms`);
-  }
+        return {
+            feedId: feed.id,
+            updates: newArticles.map(article => ({ id: feed.id, 'last_retrieved': article.date_published })),
+            notifications: newArticles.map(article => ({ webhookUrl: feed['webhook'], article, webhookType: feed['hook_type'], feedType: feed['feed_type'] }))
+        };
+    } catch (error) {
+        errors.addError(error);
+        return { feedId: feed.id, updates: [], notifications: [] };
+    }
 }
 
 
@@ -252,96 +242,81 @@ const authenticateUser = async () => {
         throw error;
     }
 };
+
+
 const parseForSupabase = (dateString, timezone = 'Asia/Tokyo') => {
-  try {
-    // 入力された日付文字列をログ出力（デバッグ用）
-    console.log('Input date string:', dateString);
-
-    // 括弧内の文字列を削除
-    dateString = String(dateString).replace(/\s*\([^)]*\)/, '');
-
-    const formats = [
-      "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
-      "EEE, dd MMM yyyy HH:mm:ss 'GMT'",
-      "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-      "ddd, DD MMM YYYY HH:mm:ss",
-      "EEE MMM dd yyyy HH:mm:ss 'GMT'XXX",
-      "EEE, dd MMM yyyy HH:mm:ss 'GMT'XXX",
-      "EEE MMM dd yyyy HH:mm:ss 'GMT'XXXXX"
-    ];
-    
-    let parsedDate;
-    for (let formatString of formats) {
-        try {
-            parsedDate = parse(dateString, formatString);
-            break;
-        } catch (error) {
-            continue;
+    try {
+        dateString = String(dateString).replace(/\s*\([^)]*\)/, '');
+        let parsedDate = new Date(dateString);
+        if (isNaN(parsedDate.getTime())) {
+            const formats = [
+                "MMM, dd MMM YYYY HH:mm:ss GMT",
+                "YYYY-MM-dd'T'HH:mm:ssZZ",
+                "ddd, DD MMM YYYY HH:mm:ss",
+                "MMM MMM dd YYYY HH:mm:ss GMTZZ",
+                "MMM, dd MMM YYYY HH:mm:ss GMTZZ",
+                "MMM MMM dd YYYY HH:mm:ss GMTZZ"
+            ];
+            
+            for (let formatString of formats) {
+                try {
+                    parsedDate = parse(dateString, formatString);
+                    break;
+                } catch (error) {
+                    continue;
+                }
+            }
         }
-    }
 
-    console.log('parseForSupabase-parsedDate:', parsedDate);
-    
-    if (!parsedDate) {
-        parsedDate = new Date(dateString);
         if (isNaN(parsedDate.getTime())) {
             throw new Error("Unsupported date format");
         }
-    }
-
-    console.log('parseForSupabase-date:', parsedDate);
-    
-    const localTime = tzDate(parsedDate, timezone);
-    const formattedDate = format(localTime, "yyyy-MM-dd'T'HH:mm:ssXXX");
-    console.log('parseForSupabase-date:', localTime);
-    // 変換後の日付文字列をログ出力（デバッグ用）
-    console.log('parseForSupabase-Formatted date:', formattedDate);
-
-    return formattedDate;
-  } catch (error) {
-    console.error('Invalid date format:', error.message);
-    return null;
-  }
-};
-const parseDate = (dateString, timezone = 'UTC') => {
-    try {
-        console.log('Input date string:', dateString);
-        dateString = String(dateString).replace(/\s*\([^)]*\)/, '');
-        console.log('Input date string-format:', dateString);
-        const formats = [
-            "EEE, dd MMM yyyy HH:mm:ss 'GMT'",
-            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-            "ddd, DD MMM YYYY HH:mm:ss",
-            "EEE MMM dd yyyy HH:mm:ss 'GMT'XXX",
-            "EEE, dd MMM yyyy HH:mm:ss 'GMT'XXX",
-            "EEE MMM dd yyyy HH:mm:ss 'GMT'XXXXX"
-        ];
-        
-        let parsedDate;
-        for (let formatString of formats) {
-            try {
-                parsedDate = parse(dateString, formatString);
-                break;
-            } catch (error) {
-                continue;
-            }
-        }
-
-        console.log('parseDate-parsedDate:', parsedDate);
-        
-        if (!parsedDate) {
-            parsedDate = new Date(dateString);
-            if (isNaN(parsedDate.getTime())) {
-                throw new Error("Unsupported date format");
-            }
-        }
-
-        console.log('parseDate-date:', parsedDate);
-        
         const localTime = tzDate(parsedDate, timezone);
-        console.log('parseDate-date:', localTime);
-        console.log('parseDate-Formatted date:', format(localTime, "yyyy-MM-dd'T'HH:mm:ssXXX"));
-        return format(localTime, "yyyy-MM-dd HH:mm:ssXXX");
+        const formattedDate = format({
+            date: localTime,
+            format: "YYYY-M-DTHH:mm:ssZZ",
+            timezone: timezone
+        });
+        return formattedDate;
+    } catch (error) {
+        console.error('Invalid date format:', error.message);
+        return null;
+    }
+};
+const parseDate = (dateString, timezone = 'Asia/Tokyo') => {
+    try {
+        dateString = String(dateString).replace(/\s*\([^)]*\)/, '');
+
+        let parsedDate = new Date(dateString);
+        if (isNaN(parsedDate.getTime())) {
+            const formats = [
+                "MMM, dd MMM YYYY HH:mm:ss GMT",
+                "YYYY-MM-dd'T'HH:mm:ssZZ",
+                "ddd, DD MMM YYYY HH:mm:ss",
+                "MMM MMM dd YYYY HH:mm:ss GMTZZ",
+                "MMM, dd MMM YYYY HH:mm:ss GMTZZ",
+                "MMM MMM dd YYYY HH:mm:ss GMTZZ"
+            ];
+            
+            for (let formatString of formats) {
+                try {
+                    parsedDate = parse(dateString, formatString);
+                    break;
+                } catch (error) {
+                    continue;
+                }
+            }
+        }
+        if (isNaN(parsedDate.getTime())) {
+            throw new Error("Unsupported date format");
+        }
+        const localTime = tzDate(parsedDate, timezone);
+        const formattedDate = format({
+            date: localTime,
+            format: "YYYY-M-DTHH:mm:ssZZ",
+            timezone: timezone
+        });
+        return formattedDate;
     } catch (error) {
         console.error('Invalid date format:', error.message);
         return null;

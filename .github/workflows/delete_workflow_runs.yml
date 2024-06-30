@@ -1,0 +1,21 @@
+name: Delete Workflow Runs
+
+on:
+  workflow_dispatch:
+    inputs:
+      days_old:
+        description: 'Delete workflow runs older than this many days'
+        required: true
+        default: '1'
+
+jobs:
+  delete_runs:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Delete workflow runs
+      uses: Mattraks/delete-workflow-runs@v2.0.6
+      with:
+        token: ${{ secrets.GH_TOKEN }}
+        repository: ${{ github.repository }}
+        retain_days: ${{ github.event.inputs.days_old }}
+        keep_minimum_runs: 1
