@@ -82,43 +82,56 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
     const payloads = articles.map(article => {
         if (feedType === SUPABASE_FEED_TYPE_X) {
             return {
-                content: article.link
+                content: article.url
             };
         } else {
             return {
                 embeds: [{
                     title: article.title,
                     description: article.contentSnippet,
-                    url: article.link,
+                    url: article.url,
                     timestamp: format(tzDate(article.date_published, 'UTC'), "yyyy-MM-dd'T'HH:mm:ssXXX", { timeZone: 'UTC' }),
                 }]
             };
         }
     });
 
-    const requests = payloads.map(payload => {
-        const url = webhookType === 'thread-normal'
-            ? `${FEED_PARENT_WEBHOOK_URL}?thread_id=${webhookUrl}`
-            : webhookUrl;
+    for (let i = 0; i < payloads.length; i += 10) {
+        const batch = payloads.slice(i, i + 10);
 
-        return fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        }).then(response => {
-            if (!response.ok) {
-                throw new Error(`Failed to notify Discord: ${response.statusText}`);
-            }
-            return response.json();
-        }).catch(error => {
-            console.error(`Error notifying Discord: ${error.message}`);
-            throw error;
+        const requests = batch.map(payload => {
+            const url = webhookType === 'thread-normal'
+                ? `${FEED_PARENT_WEBHOOK_URL}?thread_id=${webhookUrl}`
+                : webhookUrl;
+
+            console.log(`Sending notification to Discord: ${url}`);
+            console.log(`Payload: ${JSON.stringify(payload)}`);
+
+            return fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(response => {
+                if (!response.ok) {
+                    throw new Error(`Failed to notify Discord: ${response.statusText}`);
+                }
+                return response.json().catch(() => {
+                    throw new Error('Failed to parse JSON response');
+                });
+            }).then(responseData => {
+                console.log(`Notification successful: ${JSON.stringify(responseData)}`);
+            }).catch(error => {
+                console.error(`Error notifying Discord: ${error.message}`);
+            });
         });
-    });
 
-    const results = await Promise.allSettled(requests);
-    return results;
+        await Promise.all(requests);
+
+        // 10件ごとに1秒の遅延を追加
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
 }
+
   
 async function processImage(imageUrl, imageName) {
     imageUrl = decode(imageUrl);
@@ -293,7 +306,7 @@ async function main() {
         const notifications = results.flatMap(result => result.notifications);
         // 現在の日時で更新
         if (updates.length > 0) {
-            const currentDateTimeStr = parseForSupabase(currentDateTime);
+            const currentDateTimeStr = parseDate(currentDateTime);
             const feedMap = new Map(feeds.map(feed => [feed.id, feed]));
 
             const selectMap = updates.reduce((acc, update) => {
