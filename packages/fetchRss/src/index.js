@@ -65,7 +65,7 @@ async function checkForNewArticles(feedUrl, lastRetrieved) {
         
         const newArticles = feedData.items.filter(item => {
             const itemDate = parseDate(item.date_published);
-            console.log(`itemDate: ${itemDate}, lastRetrieved: ${lastRetrieved} ${isAfter(itemDate, lastRetrieved)}`);
+            console.log(`itemDate: ${itemDate}, lastRetrieved: ${lastRetrieved}`);
             return isAfter(itemDate, lastRetrieved);
           });
         return newArticles;
