@@ -44,6 +44,7 @@ jobs:
         echo "ERROR_WEBHOOK_URL=${{ secrets.ERROR_WEBHOOK_URL }}" >> $GITHUB_ENV
         echo "SUPABASE_EMAIL=${{ secrets.SUPABASE_EMAIL }}" >> $GITHUB_ENV
         echo "SUPABASE_PASSWORD=${{ secrets.SUPABASE_PASSWORD }}" >> $GITHUB_ENV
+        echo "FEED_PARENT_WEBHOOK_URL=${{ secrets.FEED_PARENT_WEBHOOK_URL }}" >> $GITHUB_ENV
         
     - name: Add Sharp
       run: |

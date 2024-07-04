@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-import { parse, format, tzDate, isAfter } from "@formkit/tempo";
+import { DateTime } from 'luxon';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import sharp from 'sharp';
@@ -64,8 +64,8 @@ async function checkForNewArticles(feedUrl, lastRetrieved) {
         const feedData = await feed.json();
         
         const newArticles = feedData.items.filter(item => {
-            const itemDate = parseDate(item.date_published);
-            return itemDate > parseDate(lastRetrieved);
+            const itemDate = DateTime.fromISO(item.date_published, { zone: 'utc' }).setZone('Asia/Tokyo');
+            return itemDate.isAfter(lastRetrieved);
           });
         return newArticles;
     }
@@ -90,7 +90,7 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
                     title: article.title,
                     description: article.contentSnippet,
                     url: article.url,
-                    timestamp: format(tzDate(article.date_published, 'UTC'), "yyyy-MM-dd'T'HH:mm:ssXXX", { timeZone: 'UTC' }),
+                    timestamp: article.date_published.toFormat('yyyy-MM-dd\'T\'HH:mm:ssZZ'),
                 }]
             };
         }
@@ -189,7 +189,8 @@ async function processFeeds(feeds, concurrencyLimit = 5) {
 
 async function processFeed(feed, errors) {
     try {
-        const lastRetrieved = feed.last_retrieved ? tzDate(feed.last_retrieved, timezone) : null;
+        console.log(`Processing feed: ${feed.id} / last_retrieved: ${feed.last_retrieved}`)
+        const lastRetrieved = DateTime.fromISO(feed.last_retrieved, { zone: 'utc' }).setZone('Asia/Tokyo') || DateTime.fromISO('1970-01-01T00:00:00Z', { zone: 'utc' }).setZone('Asia/Tokyo');
 
         const newArticles = await checkForNewArticles(feed.url, lastRetrieved);
         if (newArticles.length === 0) return { feedId: feed.id, updates: [], notifications: [] };
@@ -206,8 +207,12 @@ async function processFeed(feed, errors) {
         
             if (articlesWithImages.length > 0) {
                 
-                const latestArticleWithImage = articlesWithImages.reduce((latest, article) => 
-                    parseDate(article.date_published) > parseDate(latest.date_published) ? article : latest, articlesWithImages[0]);
+                const latestArticleWithImage = articlesWithImages.reduce((latest, article) => {
+                    const articleDate = DateTime.fromISO(article.date_published, { zone: 'utc' }).setZone('Asia/Tokyo');
+                    const latestDate = DateTime.fromISO(latest.date_published, { zone: 'utc' }).setZone('Asia/Tokyo');
+                    articleDate.isAfter(latestDate) ? article : latest;
+                }
+                , articlesWithImages[0]);
             
                 const imageUrl = latestArticleWithImage.content_html.match(/<img[^>]+src="([^">]+)"/)[1];
             
@@ -254,48 +259,9 @@ const authenticateUser = async () => {
     }
 };
 
-const parseDate = (dateString, timezone = 'Asia/Tokyo') => {
-    try {
-        dateString = String(dateString).replace(/\s*\([^)]*\)/, '');
-
-        let parsedDate = new Date(dateString);
-        if (isNaN(parsedDate.getTime())) {
-            const formats = [
-                "MMM, dd MMM YYYY HH:mm:ss GMT",
-                "YYYY-MM-dd'T'HH:mm:ssZZ",
-                "ddd, DD MMM YYYY HH:mm:ss",
-                "MMM MMM dd YYYY HH:mm:ss GMTZZ",
-                "MMM, dd MMM YYYY HH:mm:ss GMTZZ",
-                "MMM MMM dd YYYY HH:mm:ss GMTZZ"
-            ];
-            
-            for (let formatString of formats) {
-                try {
-                    parsedDate = parse(dateString, formatString);
-                    break;
-                } catch (error) {
-                    continue;
-                }
-            }
-        }
-        if (isNaN(parsedDate.getTime())) {
-            throw new Error("Unsupported date format");
-        }
-        const localTime = tzDate(parsedDate, timezone);
-        const formattedDate = format({
-            date: localTime,
-            format: "YYYY-M-DTHH:mm:ssZZ",
-            timezone: timezone
-        });
-        return formattedDate;
-    } catch (error) {
-        console.error('Invalid date format:', error.message);
-        return null;
-    }
-};
 async function main() {
     const errors = createErrorArray();
-    const currentDateTime = new Date(); // 現在の日時を取得
+    const currentDateTime = DateTime.now().setZone('Asia/Tokyo');
 
     try {
         const accessToken = await authenticateUser();
@@ -306,7 +272,7 @@ async function main() {
         const notifications = results.flatMap(result => result.notifications);
         // 現在の日時で更新
         if (updates.length > 0) {
-            const currentDateTimeStr = parseDate(currentDateTime);
+            const currentDateTimeStr = currentDateTime.toFormat('yyyy-MM-dd\'T\'HH:mm:ssZZ');
             const feedMap = new Map(feeds.map(feed => [feed.id, feed]));
 
             const selectMap = updates.reduce((acc, update) => {
