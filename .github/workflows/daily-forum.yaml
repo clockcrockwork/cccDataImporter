@@ -1,0 +1,49 @@
+name: Create Daily Forum
+
+on:
+  # schedule:
+  #   - cron: '0 15 * * *'  # 毎日日本時間の午前0時に実行
+  workflow_dispatch:  # 手動トリガーも可能にする
+
+jobs:
+  create-forum:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Create Forum Thread in Discord
+      id: create_discord_forum
+      run: |
+        DATE=$(TZ=Asia/Tokyo date -u +"%Y/%m/%d")
+        RESPONSE=$(curl -s -X POST "https://discord.com/api/v10/channels/${{ secrets.DISCORD_CHANNEL_ID }}/threads" \
+          -H "Authorization: Bot ${{ secrets.DISCORD_BOT_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "name": "'"$DATE"'",
+            "auto_archive_duration": 1440,
+            "type": 11,
+            "invitable": false,
+            "rate_limit_per_user": 10
+          }')
+
+        THREAD_ID=$(echo $RESPONSE | jq -r '.id')
+
+        if [ "$THREAD_ID" == "null" ]; then
+          echo "Failed to create forum thread"
+          echo $RESPONSE
+          exit 1
+        fi
+
+        echo "::set-output name=thread_id::$THREAD_ID"
+
+    - name: Save Forum ID to Supabase
+      run: |
+        DATE=$(TZ=Asia/Tokyo date -u +"%Y/%m/%d")
+        THREAD_ID=${{ steps.create_discord_forum.outputs.thread_id }}
+
+        DATA=$(jq -n --arg date "$DATE" --arg thread_id "$THREAD_ID" '{"date":$date,"forum_id":$thread_id}')
+
+        curl -X POST "${{ secrets.SUPABASE_URL }}/rest/v1/${{ secrets.SUPABASE_TABLE }}" \
+          -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
+          -H "Content-Type: application/json" \
+          -H "Prefer: resolution=merge-duplicates" \
+          -d "$DATA"
