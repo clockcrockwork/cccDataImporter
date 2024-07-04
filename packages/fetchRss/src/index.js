@@ -191,7 +191,7 @@ async function processFeeds(feeds, concurrencyLimit = 5) {
 async function processFeed(feed, errors) {
     try {
         const lastRetrieved = feed.last_retrieved ? tzDate(feed.last_retrieved, timezone) : null;
-
+        console.log(`Processing feed: ${feed.id} / last_retrieved: ${feed.last_retrieved}`);
         const newArticles = await checkForNewArticles(feed.url, lastRetrieved);
         if (newArticles.length === 0) return { feedId: feed.id, updates: [], notifications: [] };
         
