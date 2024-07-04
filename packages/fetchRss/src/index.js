@@ -64,8 +64,8 @@ async function checkForNewArticles(feedUrl, lastRetrieved) {
         const feedData = await feed.json();
         
         const newArticles = feedData.items.filter(item => {
-            const itemDate = DateTime.fromISO(item.date_published, { zone: 'utc' }).setZone('Asia/Tokyo');
-            return itemDate.isAfter(lastRetrieved);
+            const itemDate = DateTime.fromISO(item.date_published, { zone: 'utc' }).setZone(timezone);
+            return itemDate > lastRetrieved;
           });
         return newArticles;
     }
@@ -190,7 +190,7 @@ async function processFeeds(feeds, concurrencyLimit = 5) {
 async function processFeed(feed, errors) {
     try {
         console.log(`Processing feed: ${feed.id} / last_retrieved: ${feed.last_retrieved}`)
-        const lastRetrieved = DateTime.fromISO(feed.last_retrieved, { zone: 'utc' }).setZone('Asia/Tokyo') || DateTime.fromISO('1970-01-01T00:00:00Z', { zone: 'utc' }).setZone('Asia/Tokyo');
+        const lastRetrieved = DateTime.fromISO(feed.last_retrieved, { zone: 'utc' }).setZone(timezone) || DateTime.fromISO('1970-01-01T00:00:00Z', { zone: 'utc' }).setZone(timezone);
 
         const newArticles = await checkForNewArticles(feed.url, lastRetrieved);
         if (newArticles.length === 0) return { feedId: feed.id, updates: [], notifications: [] };
@@ -208,9 +208,9 @@ async function processFeed(feed, errors) {
             if (articlesWithImages.length > 0) {
                 
                 const latestArticleWithImage = articlesWithImages.reduce((latest, article) => {
-                    const articleDate = DateTime.fromISO(article.date_published, { zone: 'utc' }).setZone('Asia/Tokyo');
-                    const latestDate = DateTime.fromISO(latest.date_published, { zone: 'utc' }).setZone('Asia/Tokyo');
-                    articleDate.isAfter(latestDate) ? article : latest;
+                    const articleDate = DateTime.fromISO(article.date_published, { zone: 'utc' }).setZone(timezone);
+                    const latestDate = DateTime.fromISO(latest.date_published, { zone: 'utc' }).setZone(timezone);
+                    articleDate > latestDate ? article : latest;
                 }
                 , articlesWithImages[0]);
             
@@ -261,7 +261,7 @@ const authenticateUser = async () => {
 
 async function main() {
     const errors = createErrorArray();
-    const currentDateTime = DateTime.now().setZone('Asia/Tokyo');
+    const currentDateTime = DateTime.now().setZone(timezone);
 
     try {
         const accessToken = await authenticateUser();
