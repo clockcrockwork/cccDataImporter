@@ -2,7 +2,7 @@ name: Create Daily Forum
 
 on:
   # schedule:
-    # - cron: '55 14 * * *'
+    # - cron: '00 15 * * *'
   workflow_dispatch:
 
 jobs:
