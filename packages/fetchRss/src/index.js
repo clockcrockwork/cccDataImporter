@@ -6,7 +6,6 @@ import { fileURLToPath } from 'url';
 import sharp from 'sharp';
 import { decode } from 'html-entities';
 import fetch from 'node-fetch';
-// import { pipeline } from 'stream/promises';
 import { pipeline } from 'stream';
 import { promisify } from 'util';
 
@@ -77,8 +76,6 @@ async function checkForNewArticles(feedUrl, lastRetrieved) {
 
 
 async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
-    console.log(`Notifying Discord for ${articles.length} articles`);
-
     const payloads = articles.map(article => {
         if (feedType === SUPABASE_FEED_TYPE_X) {
             return {
@@ -104,9 +101,6 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
                 ? `${FEED_PARENT_WEBHOOK_URL}?thread_id=${webhookUrl}`
                 : webhookUrl;
 
-            console.log(`Sending notification to Discord: ${url}`);
-            console.log(`Payload: ${JSON.stringify(payload)}`);
-
             return fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -119,7 +113,7 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
                     throw new Error('Failed to parse JSON response');
                 });
             }).then(responseData => {
-                console.log(`Notification successful: ${JSON.stringify(responseData)}`);
+                console.log('Successfully notified Discord');
             }).catch(error => {
                 console.error(`Error notifying Discord: ${error.message}`);
             });
@@ -189,7 +183,6 @@ async function processFeeds(feeds, concurrencyLimit = 5) {
 
 async function processFeed(feed, errors) {
     try {
-        console.log(`Processing feed: ${feed.id} / last_retrieved: ${feed.last_retrieved}`)
         const lastRetrieved = DateTime.fromISO(feed.last_retrieved, { zone: 'utc' }).setZone(timezone) || DateTime.fromISO('1970-01-01T00:00:00Z', { zone: 'utc' }).setZone(timezone);
 
         const newArticles = await checkForNewArticles(feed.url, lastRetrieved);
@@ -202,9 +195,6 @@ async function processFeed(feed, errors) {
                 const imageUrl = imgMatch ? imgMatch[1] : null;
                 return imageUrl !== null;
             });
-
-            console.log(`Found ${articlesWithImages.length} articles with images for feed: ${feed.id}`);
-        
             if (articlesWithImages.length > 0) {
                 
                 const latestArticleWithImage = articlesWithImages.reduce((latest, article) => {
@@ -238,7 +228,6 @@ async function processFeed(feed, errors) {
 async function handleError(errors) {
     if (errors.length > 0) {
         const errorMessage = errors.map(err => err.message).join('\n');
-        console.log(errorMessage);
         await fetch(ERROR_WEBHOOK_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -292,7 +281,6 @@ async function main() {
                 }
             });
 
-            console.log(`step: latestUpdates, latestUpdates: ${latestUpdates.length}`);
             const { error } = await supabase.from(SUPABASE_FEED_TABLE_NAME).upsert(latestUpdates, { onConflict: 'id' }).select();
 
             if (error) {
