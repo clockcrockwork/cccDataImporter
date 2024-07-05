@@ -2,11 +2,6 @@
 
 ## setting envroments
 
-### error hundler
-- GH_TOKEN
-- GITHUB_REPO
-
-
-### other(send)
-- GITHUB_WEBHOOK_URL
-- PRODUCT_HUNT_WEBHOOK_URL
+- DISCORD_BOT_TOKEN 
+- DISCORD_CHANNEL_ID
+- SUPABASE_DAILY_TABLE_NAME
