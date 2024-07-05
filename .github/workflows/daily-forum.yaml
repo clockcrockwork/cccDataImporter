@@ -42,7 +42,7 @@ jobs:
 
         DATA=$(jq -n --arg date "$DATE" --arg thread_id "$THREAD_ID" '{"date":$date,"forum_id":$thread_id}')
 
-        curl -X POST "${{ secrets.SUPABASE_URL }}/rest/v1/${{ secrets.SUPABASE_TABLE }}" \
+        curl -X POST "${{ secrets.SUPABASE_URL }}/rest/v1/${{ secrets.SUPABASE_DAILY_TABLE_NAME }}" \
           -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
           -H "Content-Type: application/json" \
           -H "Prefer: resolution=merge-duplicates" \
