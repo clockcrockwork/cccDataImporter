@@ -10,7 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 if (!process.env.GITHUB_ACTIONS) {
-  dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+  dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 }
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -21,6 +21,14 @@ const PRODUCTHUNT_FEED_URL = process.env.PRODUCTHUNT_FEED_URL;
 const DISCORD_DAILY_WEBHOOK_URL = process.env.DISCORD_DAILY_WEBHOOK_URL;
 
 if (!SUPABASE_URL || !SUPABASE_KEY || !SUPABASE_DAILY_TABLE_NAME || !ERROR_WEBHOOK_URL || !PRODUCTHUNT_FEED_URL || !DISCORD_DAILY_WEBHOOK_URL) {
+    console.group('Missing required environment variables');
+    console.log('SUPABASE_URL:', SUPABASE_URL);
+    console.log('SUPABASE_KEY:', SUPABASE_KEY);
+    console.log('SUPABASE_DAILY_TABLE_NAME:', SUPABASE_DAILY_TABLE_NAME);
+    console.log('ERROR_WEBHOOK_URL:', ERROR_WEBHOOK_URL);
+    console.log('PRODUCTHUNT_FEED_URL:', PRODUCTHUNT_FEED_URL);
+    console.log('DISCORD_DAILY_WEBHOOK_URL:', DISCORD_DAILY_WEBHOOK_URL);
+    console.groupEnd();
     throw new Error("Missing required environment variables.");
 }
 
@@ -40,8 +48,6 @@ async function getDiscordThreadId() {
     if (error) {
         throw error;
     }
-
-    // forum_idを1つだけ取得し返す
     return data[0].forum_id;
 }
 
@@ -88,11 +94,16 @@ async function sendToDiscord(embeds) {
 
     for (const embedSet of embeds) {
         const payload = { embeds: embedSet };
-        await fetch(webhookUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
+        // test console.log
+        console.group('payload');
+        console.log(payload);
+        console.log(webhookUrl);
+        console.groupEnd();
+        // await fetch(webhookUrl, {
+        //     method: 'POST',
+        //     headers: { 'Content-Type': 'application/json' },
+        //     body: JSON.stringify(payload),
+        // });
     }
 }
 async function handleError(errors) {
