@@ -2,11 +2,11 @@ name: Create Daily Forum
 
 on:
   # schedule:
-  #   - cron: '0 15 * * *'  # 毎日日本時間の午前0時に実行
+    # - cron: '55 14 * * *'
   workflow_dispatch:
 
 jobs:
-  create-forum:
+  fetch-data-and-create-forum:
     runs-on: ubuntu-latest
 
     steps:
@@ -24,25 +24,40 @@ jobs:
             "invitable": false,
             "rate_limit_per_user": 10
           }')
-
         THREAD_ID=$(echo $RESPONSE | jq -r '.id')
-
         if [ "$THREAD_ID" == "null" ]; then
           echo "Failed to create forum thread"
           echo $RESPONSE
           exit 1
         fi
-
         echo "::set-output name=thread_id::$THREAD_ID"
+
+    - name: Login to Supabase
+      id: login_supabase
+      run: |
+        RESPONSE=$(curl -s -X POST "${{ secrets.SUPABASE_URL }}/auth/v1/token?grant_type=password" \
+          -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "email": "'"${{ secrets.SUPABASE_EMAIL }}"'",
+            "password": "'"${{ secrets.SUPABASE_PASSWORD }}"'"
+          }')
+        ACCESS_TOKEN=$(echo $RESPONSE | jq -r '.access_token')
+        if [ "$ACCESS_TOKEN" == "null" ]; then
+          echo "Failed to login to Supabase"
+          echo $RESPONSE
+          exit 1
+        fi
+        echo "::set-output name=access_token::$ACCESS_TOKEN"
 
     - name: Save Forum ID to Supabase
       run: |
         DATE=$(TZ=Asia/Tokyo date -u +"%Y/%m/%d")
         THREAD_ID=${{ steps.create_discord_forum.outputs.thread_id }}
-
+        ACCESS_TOKEN=${{ steps.login_supabase.outputs.access_token }}
         DATA=$(jq -n --arg date "$DATE" --arg thread_id "$THREAD_ID" '{"date":$date,"forum_id":$thread_id}')
-
-        curl -X POST "${{ secrets.SUPABASE_URL }}/rest/v1/${{ secrets.SUPABASE_DAILY_TABLE_NAME }}" \
+        curl -X POST "${{ secrets.SUPABASE_URL }}/rest/v1/${{ secrets.SUPABASE_TABLE }}" \
+          -H "Authorization: Bearer $ACCESS_TOKEN" \
           -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
           -H "Content-Type: application/json" \
           -H "Prefer: resolution=merge-duplicates" \
