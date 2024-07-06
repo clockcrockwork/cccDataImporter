@@ -14,7 +14,7 @@ jobs:
       id: create_discord_forum
       run: |
         DATE=$(TZ=Asia/Tokyo date -u +"%Y/%m/%d")
-        RESPONSE=$(curl -s -X POST "https://discord.com/api/v10/channels/${{ secrets.DISCORD_CHANNEL_ID }}/threads" \
+        RESPONSE=$(curl -s -X POST "https://discord.com/api/v10/channels/${{ secrets.DISCORD_DAILY_CHANNEL_ID }}/threads" \
           -H "Authorization: Bot ${{ secrets.DISCORD_BOT_TOKEN }}" \
           -H "Content-Type: application/json" \
           -d '{
@@ -42,7 +42,7 @@ jobs:
 
         DATA=$(jq -n --arg date "$DATE" --arg thread_id "$THREAD_ID" '{"date":$date,"forum_id":$thread_id}')
 
-        curl -X POST "${{ secrets.SUPABASE_URL }}/rest/v1/${{ secrets.SUPABASE_TABLE }}" \
+        curl -X POST "${{ secrets.SUPABASE_URL }}/rest/v1/${{ secrets.SUPABASE_DAILY_TABLE_NAME }}" \
           -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
           -H "Content-Type: application/json" \
           -H "Prefer: resolution=merge-duplicates" \
