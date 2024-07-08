@@ -64,3 +64,13 @@ jobs:
           -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
           -H "Content-Type: application/json" \
           -d "$DATA"
+          
+    - name: Logout from Supabase
+      if: success()
+      run: |
+        ACCESS_TOKEN=${{ env.ACCESS_TOKEN }}
+        curl -s -X POST "${{ secrets.SUPABASE_URL }}/auth/v1/logout" \
+          -H "Authorization: Bearer $ACCESS_TOKEN" \
+          -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
+          -H "Content-Type: application/json" \
+          -d '{}'
