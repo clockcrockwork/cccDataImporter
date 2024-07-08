@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import { DateTime } from 'luxon';
@@ -64,7 +65,6 @@ async function checkForNewArticles(feedUrl, lastRetrieved) {
         
         const newArticles = feedData.items.filter(item => {
             const itemDate = DateTime.fromISO(item.date_published, { zone: 'utc' }).setZone(timezone);
-            console.log(`itemDate: ${itemDate} lastRetrieved: ${lastRetrieved} / ${itemDate > lastRetrieved}`);
             return itemDate > lastRetrieved;
           });
         return newArticles;
@@ -122,7 +122,6 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
 
         await Promise.all(requests);
 
-        // 10件ごとに1秒の遅延を追加
         await new Promise(resolve => setTimeout(resolve, 1000));
     }
 }
@@ -131,16 +130,20 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
 async function processImage(imageUrl, imageName) {
     imageUrl = decode(imageUrl);
     if (processedUrls.has(imageUrl)) {
+        console.log('Image already processed:', imageUrl);
         return;
     }
     try {
         const response = await fetch(imageUrl);
         if (!response.ok) {
+            console.error(`HTTP error! status: ${response.status}`);
             throw new Error(`HTTP error! status: ${response.status}`);
         }
+        console.log('Image downloaded:', imageUrl);
 
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.startsWith('image/')) {
+            console.error('The URL does not point to a valid image');
             throw new Error('The URL does not point to a valid image');
         }
         const imageBuffer = await response.buffer();
@@ -157,6 +160,7 @@ async function processImage(imageUrl, imageName) {
                 contentType: 'image/png'
             });
         if (error) {
+            console.error('Error uploading image:', error);
             throw error;
         }
 
@@ -190,34 +194,35 @@ async function processFeed(feed, errors) {
         if (newArticles.length === 0) return { feedId: feed.id, updates: [], notifications: [] };
         
         if (feed['hook_type'] === 'thread-normal') {
-
             const articlesWithImages = newArticles.filter(article => {
                 const imgMatch = article.content_html?.match(/<img[^>]+src="([^">]+)"/);
                 const imageUrl = imgMatch ? imgMatch[1] : null;
                 return imageUrl !== null;
             });
             if (articlesWithImages.length > 0) {
-                
                 const latestArticleWithImage = articlesWithImages.reduce((latest, article) => {
                     const articleDate = DateTime.fromISO(article.date_published, { zone: 'utc' }).setZone(timezone);
                     const latestDate = DateTime.fromISO(latest.date_published, { zone: 'utc' }).setZone(timezone);
-                    articleDate > latestDate ? article : latest;
-                }
-                , articlesWithImages[0]);
-            
-                const imageUrl = latestArticleWithImage.content_html.match(/<img[^>]+src="([^">]+)"/)[1];
-            
-                if (imageUrl) {
-                    await processImage(imageUrl, feed['webhook']);
+                    console.log(`articleDate: ${articleDate} / latestDate: ${latestDate}`);
+                    return articleDate > latestDate ? article : latest;
+                }, articlesWithImages[0]);
+                if (latestArticleWithImage) {
+                    const imgMatch = latestArticleWithImage.content_html.match(/<img[^>]+src="([^">]+)"/);
+                    const imageUrl = imgMatch ? imgMatch[1] : null;
+
+                    if (imageUrl) {
+                        await processImage(imageUrl, feed['webhook']);
+                    }
                 }
             }
-        
         }
 
+        const updates = newArticles.map(article => ({ id: feed.id, 'last_retrieved': article.date_published }));
+        const notifications = newArticles.map(article => ({ webhookUrl: feed['webhook'], article, webhookType: feed['hook_type'], feedType: feed['feed_type'] }));
         return {
             feedId: feed.id,
-            updates: newArticles.map(article => ({ id: feed.id, 'last_retrieved': article.date_published })),
-            notifications: newArticles.map(article => ({ webhookUrl: feed['webhook'], article, webhookType: feed['hook_type'], feedType: feed['feed_type'] }))
+            updates: updates,
+            notifications: notifications
         };
     } catch (error) {
         errors.addError(error);
@@ -276,14 +281,13 @@ async function main() {
             const latestUpdates = selectMap.map(update => {
                 const fullFeedData = feedMap.get(update.id);
                 if (fullFeedData) {
-                    return { ...fullFeedData, 'last_retrieved': currentDateTimeStr };
+                    return { ...fullFeedData, 'last_retrieved': currentDateTime };
                 } else {
                     console.error('Full feed data not found for update id:', update.id);
                 }
             });
 
             const { error } = await supabase.from(SUPABASE_FEED_TABLE_NAME).upsert(latestUpdates, { onConflict: 'id' }).select();
-
             if (error) {
                 throw error;
             }
