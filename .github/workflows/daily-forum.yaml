@@ -1,8 +1,8 @@
 name: Create Daily Forum
 
 on:
-  # schedule:
-  #   - cron: '0 15 * * *'  # 日本標準時の午前0時に実行されます
+  schedule:
+    - cron: '0 15 * * *'  # 日本標準時の午前0時に実行されます
   workflow_dispatch:
 
 jobs:
@@ -33,7 +33,7 @@ jobs:
           echo $RESPONSE
           exit 1
         fi
-        echo "::set-output name=thread_id::$THREAD_ID"
+        echo "THREAD_ID=$THREAD_ID" >> $GITHUB_ENV
 
     - name: Login to Supabase
       id: login_supabase
@@ -51,17 +51,16 @@ jobs:
           echo $RESPONSE
           exit 1
         fi
-        echo "::set-output name=access_token::$ACCESS_TOKEN"
+        echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
 
-    - name: Save Forum ID to Supabase
+    - name: Update Forum ID in Supabase
       run: |
         DATE=$(TZ=Asia/Tokyo date -u +"%Y-%m-%d")
-        THREAD_ID=${{ steps.create_discord_forum.outputs.thread_id }}
-        ACCESS_TOKEN=${{ steps.login_supabase.outputs.access_token }}
+        THREAD_ID=${{ env.THREAD_ID }}
+        ACCESS_TOKEN=${{ env.ACCESS_TOKEN }}
         DATA=$(jq -n --arg date "$DATE" --arg thread_id "$THREAD_ID" '{"date":$date,"forum_id":$thread_id}')
-        curl -X POST "${{ secrets.SUPABASE_URL }}/rest/v1/${{ secrets.SUPABASE_DAILY_TABLE_NAME }}" \
+        curl -X PATCH "${{ secrets.SUPABASE_URL }}/rest/v1/${{ secrets.SUPABASE_DAILY_TABLE_NAME }}?id=eq.1" \
           -H "Authorization: Bearer $ACCESS_TOKEN" \
           -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
           -H "Content-Type: application/json" \
-          -H "Prefer: resolution=merge-duplicates" \
           -d "$DATA"
