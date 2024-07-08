@@ -130,7 +130,6 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
 async function processImage(imageUrl, imageName) {
     imageUrl = decode(imageUrl);
     if (processedUrls.has(imageUrl)) {
-        console.log('Image already processed:', imageUrl);
         return;
     }
     try {
@@ -139,7 +138,6 @@ async function processImage(imageUrl, imageName) {
             console.error(`HTTP error! status: ${response.status}`);
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        console.log('Image downloaded:', imageUrl);
 
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.startsWith('image/')) {

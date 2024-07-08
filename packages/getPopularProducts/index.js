@@ -21,14 +21,6 @@ const PRODUCTHUNT_FEED_URL = process.env.PRODUCTHUNT_FEED_URL;
 const DISCORD_DAILY_WEBHOOK_URL = process.env.DISCORD_DAILY_WEBHOOK_URL;
 
 if (!SUPABASE_URL || !SUPABASE_KEY || !SUPABASE_DAILY_TABLE_NAME || !ERROR_WEBHOOK_URL || !PRODUCTHUNT_FEED_URL || !DISCORD_DAILY_WEBHOOK_URL) {
-    console.group('Missing required environment variables');
-    console.log('SUPABASE_URL:', SUPABASE_URL);
-    console.log('SUPABASE_KEY:', SUPABASE_KEY);
-    console.log('SUPABASE_DAILY_TABLE_NAME:', SUPABASE_DAILY_TABLE_NAME);
-    console.log('ERROR_WEBHOOK_URL:', ERROR_WEBHOOK_URL);
-    console.log('PRODUCTHUNT_FEED_URL:', PRODUCTHUNT_FEED_URL);
-    console.log('DISCORD_DAILY_WEBHOOK_URL:', DISCORD_DAILY_WEBHOOK_URL);
-    console.groupEnd();
     throw new Error("Missing required environment variables.");
 }
 
@@ -115,7 +107,6 @@ async function sendToDiscord(embeds, retryCount = 0) {
 async function handleError(errors) {
     if (errors.length > 0) {
         const errorMessage = errors.map(err => err.message).join('\n');
-        console.log(errorMessage);
         await fetch(ERROR_WEBHOOK_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -129,7 +120,6 @@ async function main() {
         const posts = await fetchProductHuntData();
         const discordMessages = formatDiscordMessages(posts);
         await sendToDiscord(discordMessages);
-        console.log('Top 10 posts sent to Discord successfully!');
     } catch (error) {
         errors.addError(error);
     }

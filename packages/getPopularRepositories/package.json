@@ -1,5 +1,17 @@
 {
   "name": "getPopularRepositories",
   "version": "1.0.0",
-  "main": "index.js"
+  "main": "index.js",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.44.3",
+    "dotenv": "^16.4.5",
+    "html-entities": "^2.5.2",
+    "node-fetch": "^3.3.2"
+  }
 }
