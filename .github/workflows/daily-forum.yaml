@@ -14,15 +14,18 @@ jobs:
       id: create_discord_forum
       run: |
         DATE=$(TZ=Asia/Tokyo date -u +"%Y/%m/%d")
-        MESSAGE_ID=${{ steps.create_discord_message.outputs.message_id }}
-        RESPONSE=$(curl -s -X POST "https://discord.com/api/v10/channels/${{ secrets.DISCORD_DAILY_CHANNEL_ID }}/messages/$MESSAGE_ID/threads" \
+        RESPONSE=$(curl -s -X POST "https://discord.com/api/v10/channels/${{ secrets.DISCORD_DAILY_CHANNEL_ID }}/threads" \
           -H "Authorization: Bot ${{ secrets.DISCORD_BOT_TOKEN }}" \
           -H "Content-Type: application/json" \
           -d '{
             "name": "'"$DATE"'",
             "auto_archive_duration": 1440,
-            "invitable": false,
-            "rate_limit_per_user": 10
+            "type": 11,
+            "message": {
+              "content": "'"$DATE"'",
+              "embeds": [],
+              "components": []
+            }
           }')
         THREAD_ID=$(echo $RESPONSE | jq -r '.id')
         if [ "$THREAD_ID" == "null" ]; then
