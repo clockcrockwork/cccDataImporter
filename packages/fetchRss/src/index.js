@@ -77,54 +77,54 @@ async function checkForNewArticles(feedUrl, lastRetrieved) {
 
 
 async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
-    const payloads = articles.map(article => {
-        if (feedType === SUPABASE_FEED_TYPE_X) {
-            return {
-                content: article.url
-            };
-        } else {
-            return {
+    const payloads = [];
+
+    if (feedType === SUPABASE_FEED_TYPE_X) {
+        for (let i = 0; i < articles.length; i += 15) {
+            const batch = articles.slice(i, i + 15);
+            const content = batch.map(article => article.url).join('\n');
+            payloads.push({ content });
+        }
+    } else {
+        articles.forEach(article => {
+            payloads.push({
                 embeds: [{
                     title: article.title,
                     description: article.contentSnippet,
                     url: article.url,
                     timestamp: article.date_published.toFormat('yyyy-MM-dd\'T\'HH:mm:ssZZ'),
                 }]
-            };
-        }
-    });
+            });
+        });
+    }
 
-    for (let i = 0; i < payloads.length; i += 10) {
-        const batch = payloads.slice(i, i + 10);
+    for (let i = 0; i < payloads.length; i++) {
+        const payload = payloads[i];
+        const url = webhookType === 'thread-normal'
+            ? `${FEED_PARENT_WEBHOOK_URL}?thread_id=${webhookUrl}`
+            : webhookUrl;
 
-        const requests = batch.map(payload => {
-            const url = webhookType === 'thread-normal'
-                ? `${FEED_PARENT_WEBHOOK_URL}?thread_id=${webhookUrl}`
-                : webhookUrl;
-
-            return fetch(url, {
+        try {
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
-            }).then(response => {
-                if (!response.ok) {
-                    throw new Error(`Failed to notify Discord: ${response.statusText}`);
-                }
-                return response.json().catch(() => {
-                    throw new Error('Failed to parse JSON response');
-                });
-            }).then(responseData => {
-                console.log('Successfully notified Discord');
-            }).catch(error => {
-                console.error(`Error notifying Discord: ${error.message}`);
             });
-        });
 
-        await Promise.all(requests);
+            if (!response.ok) {
+                throw new Error(`Failed to notify Discord: ${response.statusText}`);
+            }
+
+            await response.json();
+            console.log('Successfully notified Discord');
+        } catch (error) {
+            console.error(`Error notifying Discord: ${error.message}`);
+        }
 
         await new Promise(resolve => setTimeout(resolve, 1000));
     }
 }
+
 
   
 async function processImage(imageUrl, imageName) {
