@@ -2,7 +2,7 @@ name: Create Daily Forum
 
 on:
   # schedule:
-    # - cron: '00 15 * * *'
+  #   - cron: '0 15 * * *'  # 日本標準時の午前0時に実行されます
   workflow_dispatch:
 
 jobs:
@@ -10,17 +10,37 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Create Forum Message in Discord
+      id: create_discord_message
+      run: |
+        DATE=$(TZ=Asia/Tokyo date -u +"%Y/%m/%d")
+        RESPONSE=$(curl -s -X POST "https://discord.com/api/v10/channels/${{ secrets.DISCORD_DAILY_CHANNEL_ID }}/messages" \
+          -H "Authorization: Bot ${{ secrets.DISCORD_BOT_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "content": "'"$DATE"'",
+            "embeds": [],
+            "components": []
+          }')
+        MESSAGE_ID=$(echo $RESPONSE | jq -r '.id')
+        if [ "$MESSAGE_ID" == "null" ]; then
+          echo "Failed to create forum message"
+          echo $RESPONSE
+          exit 1
+        fi
+        echo "::set-output name=message_id::$MESSAGE_ID"
+
     - name: Create Forum Thread in Discord
       id: create_discord_forum
       run: |
         DATE=$(TZ=Asia/Tokyo date -u +"%Y/%m/%d")
-        RESPONSE=$(curl -s -X POST "https://discord.com/api/v10/channels/${{ secrets.DISCORD_DAILY_CHANNEL_ID }}/threads" \
+        MESSAGE_ID=${{ steps.create_discord_message.outputs.message_id }}
+        RESPONSE=$(curl -s -X POST "https://discord.com/api/v10/channels/${{ secrets.DISCORD_DAILY_CHANNEL_ID }}/messages/$MESSAGE_ID/threads" \
           -H "Authorization: Bot ${{ secrets.DISCORD_BOT_TOKEN }}" \
           -H "Content-Type: application/json" \
           -d '{
             "name": "'"$DATE"'",
             "auto_archive_duration": 1440,
-            "type": 11,
             "invitable": false,
             "rate_limit_per_user": 10
           }')
@@ -52,11 +72,11 @@ jobs:
 
     - name: Save Forum ID to Supabase
       run: |
-        DATE=$(TZ=Asia/Tokyo date -u +"%Y/%m/%d")
+        DATE=$(TZ=Asia/Tokyo date -u +"%Y-%m-%d")
         THREAD_ID=${{ steps.create_discord_forum.outputs.thread_id }}
         ACCESS_TOKEN=${{ steps.login_supabase.outputs.access_token }}
         DATA=$(jq -n --arg date "$DATE" --arg thread_id "$THREAD_ID" '{"date":$date,"forum_id":$thread_id}')
-        curl -X POST "${{ secrets.SUPABASE_URL }}/rest/v1/${{ secrets.SUPABASE_DAILY_DAILY_TABLE_NAME_NAME }}" \
+        curl -X POST "${{ secrets.SUPABASE_URL }}/rest/v1/${{ secrets.SUPABASE_DAILY_TABLE_NAME }}" \
           -H "Authorization: Bearer $ACCESS_TOKEN" \
           -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
           -H "Content-Type: application/json" \
