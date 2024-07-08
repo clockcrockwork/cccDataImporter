@@ -88,24 +88,30 @@ function formatDiscordMessages(posts) {
     });
 }
 
-async function sendToDiscord(embeds) {
-    const forumId = await getDiscordThreadId();
-    const webhookUrl = `${DISCORD_DAILY_WEBHOOK_URL}?thread_id=${forumId}`;
+async function sendToDiscord(embeds, retryCount = 0) {
+    try {
+        const forumId = await getDiscordThreadId();
+        const webhookUrl = `${DISCORD_DAILY_WEBHOOK_URL}?thread_id=${forumId}`;
 
-    for (const embedSet of embeds) {
-        const payload = { embeds: embedSet };
-        // test console.log
-        console.group('payload');
-        console.log(payload);
-        console.log(webhookUrl);
-        console.groupEnd();
-        // await fetch(webhookUrl, {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify(payload),
-        // });
+        for (const embedSet of embeds) {
+            const payload = { embeds: embedSet };
+            await fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+        }
+    } catch (error) {
+        if ((error.message.includes('429') || error.message.includes('429')) && retryCount < 2) {
+            console.log('Rate limit exceeded. Retrying in 1 second...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await sendToDiscord(embeds, retryCount + 1);
+        } else {
+            throw error;
+        }
     }
 }
+
 async function handleError(errors) {
     if (errors.length > 0) {
         const errorMessage = errors.map(err => err.message).join('\n');
