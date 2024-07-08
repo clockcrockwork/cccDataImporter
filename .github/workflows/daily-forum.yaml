@@ -10,26 +10,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Create Forum Message in Discord
-      id: create_discord_message
-      run: |
-        DATE=$(TZ=Asia/Tokyo date -u +"%Y/%m/%d")
-        RESPONSE=$(curl -s -X POST "https://discord.com/api/v10/channels/${{ secrets.DISCORD_DAILY_CHANNEL_ID }}/messages" \
-          -H "Authorization: Bot ${{ secrets.DISCORD_BOT_TOKEN }}" \
-          -H "Content-Type: application/json" \
-          -d '{
-            "content": "'"$DATE"'",
-            "embeds": [],
-            "components": []
-          }')
-        MESSAGE_ID=$(echo $RESPONSE | jq -r '.id')
-        if [ "$MESSAGE_ID" == "null" ]; then
-          echo "Failed to create forum message"
-          echo $RESPONSE
-          exit 1
-        fi
-        echo "::set-output name=message_id::$MESSAGE_ID"
-
     - name: Create Forum Thread in Discord
       id: create_discord_forum
       run: |
