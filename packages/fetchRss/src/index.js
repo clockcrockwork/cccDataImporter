@@ -189,7 +189,6 @@ async function processFeeds(feeds, concurrencyLimit = 5) {
 async function processFeed(feed, errors) {
     try {
         const lastRetrieved = DateTime.fromISO(feed.last_retrieved, { zone: 'utc' }).setZone(timezone) || DateTime.fromISO('1970-01-01T00:00:00Z', { zone: 'utc' }).setZone(timezone);
-        console.log(`lastRetrieved: ${lastRetrieved}`);
         const newArticles = await checkForNewArticles(feed.url, lastRetrieved);
         if (newArticles.length === 0) return { feedId: feed.id, updates: [], notifications: [] };
         
