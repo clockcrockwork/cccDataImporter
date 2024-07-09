@@ -2,7 +2,7 @@ name: Create Daily Forum
 
 on:
   schedule:
-    - cron: '0 15 * * *'  # 日本標準時の午前0時に実行されます
+    - cron: '3 15 * * *'  # 日本標準時の午前0時に実行されます
   workflow_dispatch:
 
 jobs:
