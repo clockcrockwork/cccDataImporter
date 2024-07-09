@@ -2,6 +2,7 @@
   "name": "getPopularProducts",
   "version": "1.0.0",
   "main": "index.js",
+  "license": "BSD-2-Clause",
   "type": "module",
   "scripts": {
     "start": "node index.js",

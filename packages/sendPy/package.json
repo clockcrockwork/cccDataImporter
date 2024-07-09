@@ -2,6 +2,7 @@
   "name": "sendPyCat",
   "version": "1.0.0",
   "main": "send_cat_image.py",
+  "license": "BSD-2-Clause",
   "scripts": {
     "start:cat": "python send_cat_image.py",
     "start:wiki": "python send_wiki.py"

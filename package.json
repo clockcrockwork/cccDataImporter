@@ -12,11 +12,9 @@
     "dotenv": "^16.4.5",
     "feedparser": "^2.2.10",
     "html-to-text": "^9.0.5",
-    "jest": "^29.7.0",
     "node-fetch": "^3.3.2",
     "rss-parser": "^3.13.0",
-    "sharp": "^0.33.4",
-    "ts-jest": "^29.1.3"
+    "sharp": "^0.33.4"
   },
   "scripts": {
     "test": "run-s -l test:*",
@@ -26,9 +24,14 @@
     "test:getPopularRepositories": "yarn workspace getPopularRepositories test --maxWorkers=49%",
     "test:notifyDiscord": "yarn workspace notifyDiscord test --maxWorkers=49%",
     "upgrade": "yarn workspaces foreach run upgrade-interactive --latest && yarn dedupe && yarn install",
-    "upgrade-security": "yarn workspaces foreach run upgrade-interactive --latest --pattern '\\bvulnerable\\b' && yarn dedupe && yarn install"
+    "upgrade-security": "yarn workspaces foreach run upgrade-interactive --latest --pattern '\\bvulnerable\\b' && yarn dedupe && yarn install",
+    "license-check": "yarn workspaces foreach run license-checker --summary --production --failOn",
+    "license-output": "license-checker --summary --production --json > license/licenses-root.json && yarn workspaces run license-checker --summary --production --json > license/licenses-packages.json"
   },
   "devDependencies": {
-    "lerna": "^8.1.3"
+    "jest": "^29.7.0",
+    "lerna": "^8.1.3",
+    "license-checker": "^25.0.1",
+    "ts-jest": "^29.2.0"
   }
 }

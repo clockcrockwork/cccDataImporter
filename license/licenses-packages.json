@@ -1,0 +1,43 @@
+{
+  "aliceBlogChecker@1.0.0": {
+    "licenses": "BSD-2-Clause",
+    "path": "/workspaces/cccDataImporter/packages/aliceBlogChecker"
+  }
+}
+{
+  "extentions@1.0.0": {
+    "licenses": "BSD-2-Clause",
+    "path": "/workspaces/cccDataImporter/packages/extentions"
+  }
+}
+{
+  "fetchRss@1.0.0": {
+    "licenses": "BSD-2-Clause",
+    "path": "/workspaces/cccDataImporter/packages/fetchRss"
+  }
+}
+{
+  "getPopularProducts@1.0.0": {
+    "licenses": "BSD-2-Clause",
+    "path": "/workspaces/cccDataImporter/packages/getPopularProducts"
+  }
+}
+{
+  "getPopularRepositories@1.0.0": {
+    "licenses": "BSD-2-Clause",
+    "path": "/workspaces/cccDataImporter/packages/getPopularRepositories"
+  }
+}
+{
+  "notifyDiscord@1.0.0": {
+    "licenses": "BSD-2-Clause",
+    "path": "/workspaces/cccDataImporter/packages/notifyDiscord"
+  }
+}
+{
+  "sendPyCat@1.0.0": {
+    "licenses": "BSD-2-Clause",
+    "path": "/workspaces/cccDataImporter/packages/sendPy"
+  }
+}
+

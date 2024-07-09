@@ -2,6 +2,7 @@
   "name": "extentions",
   "version": "1.0.0",
   "main": "index.js",
+  "license": "BSD-2-Clause",
   "dependencies": {
     "chrome-extension-cli": "^1.5.0"
   }

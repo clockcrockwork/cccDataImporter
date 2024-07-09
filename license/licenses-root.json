@@ -1,0 +1,761 @@
+{
+  "@babel/code-frame@7.24.7": {
+    "licenses": "MIT",
+    "repository": "https://github.com/babel/babel",
+    "publisher": "The Babel Team",
+    "url": "https://babel.dev/team",
+    "path": "/workspaces/cccDataImporter/node_modules/@babel/code-frame",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/@babel/code-frame/LICENSE"
+  },
+  "@babel/helper-validator-identifier@7.24.7": {
+    "licenses": "MIT",
+    "repository": "https://github.com/babel/babel",
+    "publisher": "The Babel Team",
+    "url": "https://babel.dev/team",
+    "path": "/workspaces/cccDataImporter/node_modules/@babel/helper-validator-identifier",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/@babel/helper-validator-identifier/LICENSE"
+  },
+  "@babel/highlight@7.24.7": {
+    "licenses": "MIT",
+    "repository": "https://github.com/babel/babel",
+    "publisher": "The Babel Team",
+    "url": "https://babel.dev/team",
+    "path": "/workspaces/cccDataImporter/node_modules/@babel/highlight",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/@babel/highlight/LICENSE"
+  },
+  "@jest/expect-utils@29.7.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/jestjs/jest",
+    "path": "/workspaces/cccDataImporter/node_modules/@jest/expect-utils",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/@jest/expect-utils/LICENSE"
+  },
+  "@jest/schemas@29.6.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/jestjs/jest",
+    "path": "/workspaces/cccDataImporter/node_modules/@jest/schemas",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/@jest/schemas/LICENSE"
+  },
+  "@jest/types@29.6.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/jestjs/jest",
+    "path": "/workspaces/cccDataImporter/node_modules/@jest/types",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/@jest/types/LICENSE"
+  },
+  "@selderee/plugin-htmlparser2@0.11.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/mxxii/selderee",
+    "publisher": "KillyMXI",
+    "path": "/workspaces/cccDataImporter/node_modules/@selderee/plugin-htmlparser2",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/@selderee/plugin-htmlparser2/LICENSE"
+  },
+  "@sinclair/typebox@0.27.8": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sinclairzx81/typebox",
+    "publisher": "sinclairzx81",
+    "path": "/workspaces/cccDataImporter/node_modules/@sinclair/typebox",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/@sinclair/typebox/license"
+  },
+  "@types/istanbul-lib-coverage@2.0.6": {
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+    "path": "/workspaces/cccDataImporter/node_modules/@types/istanbul-lib-coverage",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/@types/istanbul-lib-coverage/LICENSE"
+  },
+  "@types/istanbul-lib-report@3.0.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+    "path": "/workspaces/cccDataImporter/node_modules/@types/istanbul-lib-report",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/@types/istanbul-lib-report/LICENSE"
+  },
+  "@types/istanbul-reports@3.0.4": {
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+    "path": "/workspaces/cccDataImporter/node_modules/@types/istanbul-reports",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/@types/istanbul-reports/LICENSE"
+  },
+  "@types/jest@29.5.12": {
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+    "path": "/workspaces/cccDataImporter/node_modules/@types/jest",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/@types/jest/LICENSE"
+  },
+  "@types/node@20.14.10": {
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+    "path": "/workspaces/cccDataImporter/node_modules/@types/node",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/@types/node/LICENSE"
+  },
+  "@types/stack-utils@2.0.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+    "path": "/workspaces/cccDataImporter/node_modules/@types/stack-utils",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/@types/stack-utils/LICENSE"
+  },
+  "@types/yargs-parser@21.0.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+    "path": "/workspaces/cccDataImporter/node_modules/@types/yargs-parser",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/@types/yargs-parser/LICENSE"
+  },
+  "@types/yargs@17.0.32": {
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+    "path": "/workspaces/cccDataImporter/node_modules/@types/yargs",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/@types/yargs/LICENSE"
+  },
+  "addressparser@1.0.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/andris9/addressparser",
+    "publisher": "Andris Reinman",
+    "path": "/workspaces/cccDataImporter/node_modules/addressparser",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/addressparser/LICENSE"
+  },
+  "ansi-styles@3.2.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/chalk/ansi-styles",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "sindresorhus.com",
+    "path": "/workspaces/cccDataImporter/node_modules/@babel/highlight/node_modules/ansi-styles",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/@babel/highlight/node_modules/ansi-styles/license"
+  },
+  "ansi-styles@4.3.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/chalk/ansi-styles",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "sindresorhus.com",
+    "path": "/workspaces/cccDataImporter/node_modules/ansi-styles",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/ansi-styles/license"
+  },
+  "ansi-styles@5.2.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/chalk/ansi-styles",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "https://sindresorhus.com",
+    "path": "/workspaces/cccDataImporter/node_modules/pretty-format/node_modules/ansi-styles",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/pretty-format/node_modules/ansi-styles/license"
+  },
+  "array-indexofobject@0.0.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/danmactough/node-array-indexofobject",
+    "publisher": "Dan MacTough",
+    "email": "danmactough@gmail.com",
+    "path": "/workspaces/cccDataImporter/node_modules/array-indexofobject",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/array-indexofobject/README.md"
+  },
+  "braces@3.0.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/micromatch/braces",
+    "publisher": "Jon Schlinkert",
+    "url": "https://github.com/jonschlinkert",
+    "path": "/workspaces/cccDataImporter/node_modules/braces",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/braces/LICENSE"
+  },
+  "cccDataImporter@1.0.0": {
+    "licenses": "UNLICENSED",
+    "private": true,
+    "repository": "https://github.com/clockcrockwork/cccDataImporter",
+    "publisher": "clockcrockwork",
+    "path": "/workspaces/cccDataImporter"
+  },
+  "chalk@2.4.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/chalk/chalk",
+    "path": "/workspaces/cccDataImporter/node_modules/@babel/highlight/node_modules/chalk",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/@babel/highlight/node_modules/chalk/license"
+  },
+  "chalk@4.1.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/chalk/chalk",
+    "path": "/workspaces/cccDataImporter/node_modules/chalk",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/chalk/license"
+  },
+  "ci-info@3.9.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/watson/ci-info",
+    "publisher": "Thomas Watson Steen",
+    "email": "w@tson.dk",
+    "url": "https://twitter.com/wa7son",
+    "path": "/workspaces/cccDataImporter/node_modules/ci-info",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/ci-info/LICENSE"
+  },
+  "color-convert@1.9.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/Qix-/color-convert",
+    "publisher": "Heather Arthur",
+    "email": "fayearthur@gmail.com",
+    "path": "/workspaces/cccDataImporter/node_modules/@babel/highlight/node_modules/color-convert",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/@babel/highlight/node_modules/color-convert/LICENSE"
+  },
+  "color-convert@2.0.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/Qix-/color-convert",
+    "publisher": "Heather Arthur",
+    "email": "fayearthur@gmail.com",
+    "path": "/workspaces/cccDataImporter/node_modules/color-convert",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/color-convert/LICENSE"
+  },
+  "color-name@1.1.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/dfcreative/color-name",
+    "publisher": "DY",
+    "email": "dfcreative@gmail.com",
+    "path": "/workspaces/cccDataImporter/node_modules/@babel/highlight/node_modules/color-name",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/@babel/highlight/node_modules/color-name/LICENSE"
+  },
+  "color-name@1.1.4": {
+    "licenses": "MIT",
+    "repository": "https://github.com/colorjs/color-name",
+    "publisher": "DY",
+    "email": "dfcreative@gmail.com",
+    "path": "/workspaces/cccDataImporter/node_modules/color-name",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/color-name/LICENSE"
+  },
+  "color-string@1.9.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/Qix-/color-string",
+    "publisher": "Heather Arthur",
+    "email": "fayearthur@gmail.com",
+    "path": "/workspaces/cccDataImporter/node_modules/color-string",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/color-string/LICENSE"
+  },
+  "color@4.2.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/Qix-/color",
+    "path": "/workspaces/cccDataImporter/node_modules/color",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/color/LICENSE"
+  },
+  "core-util-is@1.0.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/isaacs/core-util-is",
+    "publisher": "Isaac Z. Schlueter",
+    "email": "i@izs.me",
+    "url": "http://blog.izs.me/",
+    "path": "/workspaces/cccDataImporter/node_modules/core-util-is",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/core-util-is/LICENSE"
+  },
+  "data-uri-to-buffer@4.0.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/TooTallNate/node-data-uri-to-buffer",
+    "publisher": "Nathan Rajlich",
+    "email": "nathan@tootallnate.net",
+    "url": "http://n8.io/",
+    "path": "/workspaces/cccDataImporter/node_modules/data-uri-to-buffer",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/data-uri-to-buffer/README.md"
+  },
+  "deepmerge@4.3.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/TehShrike/deepmerge",
+    "path": "/workspaces/cccDataImporter/node_modules/deepmerge",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/deepmerge/license.txt"
+  },
+  "detect-libc@2.0.3": {
+    "licenses": "Apache-2.0",
+    "repository": "https://github.com/lovell/detect-libc",
+    "publisher": "Lovell Fuller",
+    "email": "npm@lovell.info",
+    "path": "/workspaces/cccDataImporter/node_modules/detect-libc",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/detect-libc/LICENSE"
+  },
+  "diff-sequences@29.6.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/jestjs/jest",
+    "path": "/workspaces/cccDataImporter/node_modules/diff-sequences",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/diff-sequences/LICENSE"
+  },
+  "dom-serializer@2.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/cheeriojs/dom-serializer",
+    "publisher": "Felix Boehm",
+    "email": "me@feedic.com",
+    "path": "/workspaces/cccDataImporter/node_modules/dom-serializer",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/dom-serializer/LICENSE"
+  },
+  "domelementtype@2.3.0": {
+    "licenses": "BSD-2-Clause",
+    "repository": "https://github.com/fb55/domelementtype",
+    "publisher": "Felix Boehm",
+    "email": "me@feedic.com",
+    "path": "/workspaces/cccDataImporter/node_modules/domelementtype",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/domelementtype/LICENSE"
+  },
+  "domhandler@5.0.3": {
+    "licenses": "BSD-2-Clause",
+    "repository": "https://github.com/fb55/domhandler",
+    "publisher": "Felix Boehm",
+    "email": "me@feedic.com",
+    "path": "/workspaces/cccDataImporter/node_modules/domhandler",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/domhandler/LICENSE"
+  },
+  "domutils@3.1.0": {
+    "licenses": "BSD-2-Clause",
+    "repository": "https://github.com/fb55/domutils",
+    "publisher": "Felix Boehm",
+    "email": "me@feedic.com",
+    "path": "/workspaces/cccDataImporter/node_modules/domutils",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/domutils/LICENSE"
+  },
+  "dotenv@16.4.5": {
+    "licenses": "BSD-2-Clause",
+    "repository": "https://github.com/motdotla/dotenv",
+    "path": "/workspaces/cccDataImporter/node_modules/dotenv",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/dotenv/LICENSE"
+  },
+  "entities@2.2.0": {
+    "licenses": "BSD-2-Clause",
+    "repository": "https://github.com/fb55/entities",
+    "publisher": "Felix Boehm",
+    "email": "me@feedic.com",
+    "path": "/workspaces/cccDataImporter/node_modules/rss-parser/node_modules/entities",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/rss-parser/node_modules/entities/LICENSE"
+  },
+  "entities@4.5.0": {
+    "licenses": "BSD-2-Clause",
+    "repository": "https://github.com/fb55/entities",
+    "publisher": "Felix Boehm",
+    "email": "me@feedic.com",
+    "path": "/workspaces/cccDataImporter/node_modules/entities",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/entities/LICENSE"
+  },
+  "escape-string-regexp@1.0.5": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/escape-string-regexp",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "sindresorhus.com",
+    "path": "/workspaces/cccDataImporter/node_modules/escape-string-regexp",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/escape-string-regexp/license"
+  },
+  "escape-string-regexp@2.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/escape-string-regexp",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "sindresorhus.com",
+    "path": "/workspaces/cccDataImporter/node_modules/stack-utils/node_modules/escape-string-regexp",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/stack-utils/node_modules/escape-string-regexp/license"
+  },
+  "expect@29.7.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/jestjs/jest",
+    "path": "/workspaces/cccDataImporter/node_modules/expect",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/expect/LICENSE"
+  },
+  "feedparser@2.2.10": {
+    "licenses": "MIT",
+    "repository": "https://github.com/danmactough/node-feedparser",
+    "publisher": "Dan MacTough",
+    "email": "danmactough@gmail.com",
+    "path": "/workspaces/cccDataImporter/node_modules/feedparser",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/feedparser/LICENSE"
+  },
+  "fetch-blob@3.2.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/node-fetch/fetch-blob",
+    "publisher": "Jimmy Wärting",
+    "email": "jimmy@warting.se",
+    "url": "https://jimmy.warting.se",
+    "path": "/workspaces/cccDataImporter/node_modules/fetch-blob",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/fetch-blob/LICENSE"
+  },
+  "fill-range@7.1.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/jonschlinkert/fill-range",
+    "publisher": "Jon Schlinkert",
+    "url": "https://github.com/jonschlinkert",
+    "path": "/workspaces/cccDataImporter/node_modules/fill-range",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/fill-range/LICENSE"
+  },
+  "formdata-polyfill@4.0.10": {
+    "licenses": "MIT",
+    "repository": "git+https://jimmywarting@github.com/jimmywarting/FormData",
+    "publisher": "Jimmy Wärting",
+    "path": "/workspaces/cccDataImporter/node_modules/formdata-polyfill",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/formdata-polyfill/LICENSE"
+  },
+  "graceful-fs@4.2.11": {
+    "licenses": "ISC",
+    "repository": "https://github.com/isaacs/node-graceful-fs",
+    "path": "/workspaces/cccDataImporter/node_modules/graceful-fs",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/graceful-fs/LICENSE"
+  },
+  "has-flag@3.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/has-flag",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "sindresorhus.com",
+    "path": "/workspaces/cccDataImporter/node_modules/@babel/highlight/node_modules/has-flag",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/@babel/highlight/node_modules/has-flag/license"
+  },
+  "has-flag@4.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/has-flag",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "sindresorhus.com",
+    "path": "/workspaces/cccDataImporter/node_modules/has-flag",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/has-flag/license"
+  },
+  "html-to-text@9.0.5": {
+    "licenses": "MIT",
+    "repository": "https://github.com/html-to-text/node-html-to-text",
+    "publisher": "Malte Legenhausen",
+    "email": "legenhausen@werk85.de",
+    "path": "/workspaces/cccDataImporter/node_modules/html-to-text",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/html-to-text/LICENSE"
+  },
+  "htmlparser2@8.0.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/fb55/htmlparser2",
+    "publisher": "Felix Boehm",
+    "email": "me@feedic.com",
+    "path": "/workspaces/cccDataImporter/node_modules/htmlparser2",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/htmlparser2/LICENSE"
+  },
+  "inherits@2.0.4": {
+    "licenses": "ISC",
+    "repository": "https://github.com/isaacs/inherits",
+    "path": "/workspaces/cccDataImporter/node_modules/inherits",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/inherits/LICENSE"
+  },
+  "is-arrayish@0.3.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/qix-/node-is-arrayish",
+    "publisher": "Qix",
+    "url": "http://github.com/qix-",
+    "path": "/workspaces/cccDataImporter/node_modules/simple-swizzle/node_modules/is-arrayish",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/simple-swizzle/node_modules/is-arrayish/LICENSE"
+  },
+  "is-number@7.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/jonschlinkert/is-number",
+    "publisher": "Jon Schlinkert",
+    "url": "https://github.com/jonschlinkert",
+    "path": "/workspaces/cccDataImporter/node_modules/is-number",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/is-number/LICENSE"
+  },
+  "isarray@1.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/juliangruber/isarray",
+    "publisher": "Julian Gruber",
+    "email": "mail@juliangruber.com",
+    "url": "http://juliangruber.com",
+    "path": "/workspaces/cccDataImporter/node_modules/isarray",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/isarray/README.md"
+  },
+  "jest-diff@29.7.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/jestjs/jest",
+    "path": "/workspaces/cccDataImporter/node_modules/jest-diff",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/jest-diff/LICENSE"
+  },
+  "jest-get-type@29.6.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/jestjs/jest",
+    "path": "/workspaces/cccDataImporter/node_modules/jest-get-type",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/jest-get-type/LICENSE"
+  },
+  "jest-matcher-utils@29.7.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/jestjs/jest",
+    "path": "/workspaces/cccDataImporter/node_modules/jest-matcher-utils",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/jest-matcher-utils/LICENSE"
+  },
+  "jest-message-util@29.7.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/jestjs/jest",
+    "path": "/workspaces/cccDataImporter/node_modules/jest-message-util",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/jest-message-util/LICENSE"
+  },
+  "jest-util@29.7.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/jestjs/jest",
+    "path": "/workspaces/cccDataImporter/node_modules/jest-util",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/jest-util/LICENSE"
+  },
+  "js-tokens@4.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/lydell/js-tokens",
+    "publisher": "Simon Lydell",
+    "path": "/workspaces/cccDataImporter/node_modules/js-tokens",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/js-tokens/LICENSE"
+  },
+  "leac@0.6.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/mxxii/leac",
+    "publisher": "KillyMXI",
+    "path": "/workspaces/cccDataImporter/node_modules/leac",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/leac/LICENSE"
+  },
+  "lodash.assign@4.2.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/lodash/lodash",
+    "publisher": "John-David Dalton",
+    "email": "john.david.dalton@gmail.com",
+    "url": "http://allyoucanleet.com/",
+    "path": "/workspaces/cccDataImporter/node_modules/lodash.assign",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/lodash.assign/LICENSE"
+  },
+  "lodash.get@4.4.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/lodash/lodash",
+    "publisher": "John-David Dalton",
+    "email": "john.david.dalton@gmail.com",
+    "url": "http://allyoucanleet.com/",
+    "path": "/workspaces/cccDataImporter/node_modules/lodash.get",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/lodash.get/LICENSE"
+  },
+  "lodash.has@4.5.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/lodash/lodash",
+    "publisher": "John-David Dalton",
+    "email": "john.david.dalton@gmail.com",
+    "url": "http://allyoucanleet.com/",
+    "path": "/workspaces/cccDataImporter/node_modules/lodash.has",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/lodash.has/LICENSE"
+  },
+  "lodash.uniq@4.5.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/lodash/lodash",
+    "publisher": "John-David Dalton",
+    "email": "john.david.dalton@gmail.com",
+    "url": "http://allyoucanleet.com/",
+    "path": "/workspaces/cccDataImporter/node_modules/lodash.uniq",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/lodash.uniq/LICENSE"
+  },
+  "micromatch@4.0.7": {
+    "licenses": "MIT",
+    "repository": "https://github.com/micromatch/micromatch",
+    "publisher": "Jon Schlinkert",
+    "url": "https://github.com/jonschlinkert",
+    "path": "/workspaces/cccDataImporter/node_modules/micromatch",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/micromatch/LICENSE"
+  },
+  "mri@1.2.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/lukeed/mri",
+    "publisher": "Luke Edwards",
+    "email": "luke.edwards05@gmail.com",
+    "url": "https://lukeed.com",
+    "path": "/workspaces/cccDataImporter/node_modules/mri",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/mri/license.md"
+  },
+  "node-domexception@1.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/jimmywarting/node-domexception",
+    "publisher": "Jimmy Wärting",
+    "path": "/workspaces/cccDataImporter/node_modules/node-domexception",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/node-domexception/LICENSE"
+  },
+  "node-fetch@3.3.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/node-fetch/node-fetch",
+    "publisher": "David Frank",
+    "path": "/workspaces/cccDataImporter/node_modules/node-fetch",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/node-fetch/LICENSE.md"
+  },
+  "parseley@0.12.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/mxxii/parseley",
+    "publisher": "KillyMXI",
+    "path": "/workspaces/cccDataImporter/node_modules/parseley",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/parseley/LICENSE"
+  },
+  "peberminta@0.9.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/mxxii/peberminta",
+    "publisher": "KillyMXI",
+    "path": "/workspaces/cccDataImporter/node_modules/peberminta",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/peberminta/LICENSE"
+  },
+  "picocolors@1.0.1": {
+    "licenses": "ISC",
+    "repository": "https://github.com/alexeyraspopov/picocolors",
+    "publisher": "Alexey Raspopov",
+    "path": "/workspaces/cccDataImporter/node_modules/picocolors",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/picocolors/LICENSE"
+  },
+  "picomatch@2.3.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/micromatch/picomatch",
+    "publisher": "Jon Schlinkert",
+    "url": "https://github.com/jonschlinkert",
+    "path": "/workspaces/cccDataImporter/node_modules/picomatch",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/picomatch/LICENSE"
+  },
+  "pretty-format@29.7.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/jestjs/jest",
+    "publisher": "James Kyle",
+    "email": "me@thejameskyle.com",
+    "path": "/workspaces/cccDataImporter/node_modules/pretty-format",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/pretty-format/LICENSE"
+  },
+  "process-nextick-args@2.0.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/calvinmetcalf/process-nextick-args",
+    "path": "/workspaces/cccDataImporter/node_modules/process-nextick-args",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/process-nextick-args/license.md"
+  },
+  "react-is@18.3.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/facebook/react",
+    "path": "/workspaces/cccDataImporter/node_modules/react-is",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/react-is/LICENSE"
+  },
+  "readable-stream@2.3.8": {
+    "licenses": "MIT",
+    "repository": "https://github.com/nodejs/readable-stream",
+    "path": "/workspaces/cccDataImporter/node_modules/feedparser/node_modules/readable-stream",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/feedparser/node_modules/readable-stream/LICENSE"
+  },
+  "rss-parser@3.13.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/bobby-brennan/rss-parser",
+    "publisher": "Bobby Brennan",
+    "path": "/workspaces/cccDataImporter/node_modules/rss-parser",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/rss-parser/LICENSE"
+  },
+  "safe-buffer@5.1.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/feross/safe-buffer",
+    "publisher": "Feross Aboukhadijeh",
+    "email": "feross@feross.org",
+    "url": "http://feross.org",
+    "path": "/workspaces/cccDataImporter/node_modules/feedparser/node_modules/safe-buffer",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/feedparser/node_modules/safe-buffer/LICENSE"
+  },
+  "sax@1.4.1": {
+    "licenses": "ISC",
+    "repository": "https://github.com/isaacs/sax-js",
+    "publisher": "Isaac Z. Schlueter",
+    "email": "i@izs.me",
+    "url": "http://blog.izs.me/",
+    "path": "/workspaces/cccDataImporter/node_modules/sax",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/sax/LICENSE"
+  },
+  "selderee@0.11.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/mxxii/selderee",
+    "publisher": "KillyMXI",
+    "path": "/workspaces/cccDataImporter/node_modules/selderee",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/selderee/LICENSE"
+  },
+  "semver@7.6.2": {
+    "licenses": "ISC",
+    "repository": "https://github.com/npm/node-semver",
+    "publisher": "GitHub Inc.",
+    "path": "/workspaces/cccDataImporter/node_modules/semver",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/semver/LICENSE"
+  },
+  "sharp@0.33.4": {
+    "licenses": "Apache-2.0",
+    "repository": "https://github.com/lovell/sharp",
+    "publisher": "Lovell Fuller",
+    "email": "npm@lovell.info",
+    "path": "/workspaces/cccDataImporter/node_modules/sharp",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/sharp/LICENSE"
+  },
+  "simple-swizzle@0.2.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/qix-/node-simple-swizzle",
+    "publisher": "Qix",
+    "url": "http://github.com/qix-",
+    "path": "/workspaces/cccDataImporter/node_modules/simple-swizzle",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/simple-swizzle/LICENSE"
+  },
+  "slash@3.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/slash",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "sindresorhus.com",
+    "path": "/workspaces/cccDataImporter/node_modules/slash",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/slash/license"
+  },
+  "stack-utils@2.0.6": {
+    "licenses": "MIT",
+    "repository": "https://github.com/tapjs/stack-utils",
+    "publisher": "James Talmage",
+    "email": "james@talmage.io",
+    "url": "github.com/jamestalmage",
+    "path": "/workspaces/cccDataImporter/node_modules/stack-utils",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/stack-utils/LICENSE.md"
+  },
+  "string_decoder@1.1.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/nodejs/string_decoder",
+    "path": "/workspaces/cccDataImporter/node_modules/feedparser/node_modules/string_decoder",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/feedparser/node_modules/string_decoder/LICENSE"
+  },
+  "supports-color@5.5.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/chalk/supports-color",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "sindresorhus.com",
+    "path": "/workspaces/cccDataImporter/node_modules/@babel/highlight/node_modules/supports-color",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/@babel/highlight/node_modules/supports-color/license"
+  },
+  "supports-color@7.2.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/chalk/supports-color",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "sindresorhus.com",
+    "path": "/workspaces/cccDataImporter/node_modules/supports-color",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/supports-color/license"
+  },
+  "to-regex-range@5.0.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/micromatch/to-regex-range",
+    "publisher": "Jon Schlinkert",
+    "url": "https://github.com/jonschlinkert",
+    "path": "/workspaces/cccDataImporter/node_modules/to-regex-range",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/to-regex-range/LICENSE"
+  },
+  "undici-types@5.26.5": {
+    "licenses": "MIT",
+    "repository": "https://github.com/nodejs/undici",
+    "path": "/workspaces/cccDataImporter/node_modules/undici-types",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/undici-types/README.md"
+  },
+  "util-deprecate@1.0.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/TooTallNate/util-deprecate",
+    "publisher": "Nathan Rajlich",
+    "email": "nathan@tootallnate.net",
+    "url": "http://n8.io/",
+    "path": "/workspaces/cccDataImporter/node_modules/util-deprecate",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/util-deprecate/LICENSE"
+  },
+  "web-streams-polyfill@3.3.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/MattiasBuelens/web-streams-polyfill",
+    "publisher": "Mattias Buelens",
+    "email": "mattias@buelens.com",
+    "path": "/workspaces/cccDataImporter/node_modules/web-streams-polyfill",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/web-streams-polyfill/LICENSE"
+  },
+  "xml2js@0.5.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/Leonidas-from-XIV/node-xml2js",
+    "publisher": "Marek Kubica",
+    "email": "marek@xivilization.net",
+    "url": "https://xivilization.net",
+    "path": "/workspaces/cccDataImporter/node_modules/xml2js",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/xml2js/LICENSE"
+  },
+  "xmlbuilder@11.0.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/oozcitak/xmlbuilder-js",
+    "publisher": "Ozgur Ozcitak",
+    "email": "oozcitak@gmail.com",
+    "path": "/workspaces/cccDataImporter/node_modules/xmlbuilder",
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/xmlbuilder/LICENSE"
+  }
+}
+
