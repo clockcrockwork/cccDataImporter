@@ -6,6 +6,9 @@ on:
 jobs:
   update-json:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,14 +23,14 @@ jobs:
           
           # GitHub APIを使用して当日のアクション実行結果を取得
           REPO="${GITHUB_REPOSITORY}"
-          # PREV_DATEとして、前日の15時1分から当日の15時0分までの間のアクション実行結果を取得
           PREV_DATE=$(TZ='Asia/Tokyo' date -d 'yesterday 15:01' '+%Y-%m-%dT%H:%M:%SZ')
-          ACTIONS_DATA=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          ACTIONS_DATA=$(curl -s -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
             "https://api.github.com/repos/${REPO}/actions/runs?created=${PREV_DATE}&per_page=100")
-
-          # ログに出力
-          echo "$ACTIONS_DATA"
           
+          # ログに出力（デバッグ用）
+          echo "API Response:"
+          echo "$ACTIONS_DATA" | jq .
+
           # アクション名、成功回数、失敗回数、実行時間、請求対象時間を集計
           ACTIONS_SUMMARY=$(echo "$ACTIONS_DATA" | jq -r '
             if .workflow_runs == null or ((.workflow_runs | type) != "array") or (.workflow_runs | length == 0) then
@@ -47,10 +50,11 @@ jobs:
                 })
             end
           ')
-
-          # ログに出力
-          echo "$ACTIONS_SUMMARY"
           
+          # ログに出力（デバッグ用）
+          echo "Actions Summary:"
+          echo "$ACTIONS_SUMMARY" | jq .
+
           # daily.jsonを更新
           if [ "$ACTIONS_SUMMARY" = "null" ]; then
             jq --arg today "$TODAY" '.day = $today | .actions = null' daily.json | sponge daily.json
@@ -60,6 +64,8 @@ jobs:
               .actions = $actions
             ' daily.json | sponge daily.json
           fi
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         shell: bash
         
       - name: Commit changes
