@@ -23,6 +23,9 @@ jobs:
           DATE=$(TZ='Asia/Tokyo' date '+%Y-%m-%d')
           ACTIONS_DATA=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${REPO}/actions/runs?created=${DATE}&per_page=100")
+
+          # ログに出力
+          echo "$ACTIONS_DATA"
           
           # アクション名、成功回数、失敗回数、実行時間、請求対象時間を集計
           ACTIONS_SUMMARY=$(echo "$ACTIONS_DATA" | jq -r '
@@ -43,6 +46,9 @@ jobs:
                 })
             end
           ')
+
+          # ログに出力
+          echo "$ACTIONS_SUMMARY"
           
           # daily.jsonを更新
           if [ "$ACTIONS_SUMMARY" = "null" ]; then
