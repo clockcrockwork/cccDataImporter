@@ -1,45 +1,74 @@
-name: Daily Update
+name: Create Daily Forum
+
 on:
   schedule:
-    - cron: '3 15 * * *' # UTCで毎日0時0分(日本時間で9時0分)に実行
+    - cron: '3 15 * * *'
   workflow_dispatch:
+
 jobs:
-  update-json:
+  fetch-data-and-create-forum:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        
-      - name: Install moreutils
-        run: sudo apt-get update && sudo apt-get install -y moreutils
-        
-      - name: Update day key in daily.json
-        run: |
-          TODAY=$(TZ=Asia/Tokyo date -u +"%Y/%m/%d")
-          jq --arg today "$TODAY" '.day = $today' daily.json | sponge daily.json
-        shell: bash
-        
-      - name: Commit changes
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add daily.json
-          git commit -m 'Update day key in daily.json'
-        shell: bash
-        
-      - name: Create pull request
-        uses: peter-evans/create-pull-request@v4
-        with:
-          token: ${{ secrets.GH_TOKEN }}
-          commit-message: 'Update day key in daily.json'
-          branch: 'update-daily-json'
-          base: 'main' 
-          title: 'Automated PR for daily.json update'
-          body: 'This PR is automatically created by GitHub Actions.'
-          labels: 'automated-pr'
-          merge: 'squash'
-      - name: Enable auto-merge
-        uses: peter-evans/enable-pull-request-automerge@v3
-        with:
-          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
-          token: ${{ secrets.GH_TOKEN }}
+    - name: Create Forum Thread in Discord
+      id: create_discord_forum
+      run: |
+        DATE=$(TZ=Asia/Tokyo date -u +"%Y/%m/%d")
+        RESPONSE=$(curl -s -X POST "https://discord.com/api/v10/channels/${{ secrets.DISCORD_DAILY_CHANNEL_ID }}/threads" \
+          -H "Authorization: Bot ${{ secrets.DISCORD_BOT_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "name": "'"$DATE"'",
+            "auto_archive_duration": 1440,
+            "type": 11,
+            "message": {
+              "content": "'"$DATE"'",
+              "embeds": [],
+              "components": []
+            }
+          }')
+        THREAD_ID=$(echo $RESPONSE | jq -r '.id')
+        if [ "$THREAD_ID" == "null" ]; then
+          echo "Failed to create forum thread"
+          echo $RESPONSE
+          exit 1
+        fi
+        echo "THREAD_ID=$THREAD_ID" >> $GITHUB_ENV
+    - name: Login to Supabase
+      id: login_supabase
+      run: |
+        RESPONSE=$(curl -s -X POST "${{ secrets.SUPABASE_URL }}/auth/v1/token?grant_type=password" \
+          -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "email": "'"${{ secrets.SUPABASE_EMAIL }}"'",
+            "password": "'"${{ secrets.SUPABASE_PASSWORD }}"'"
+          }')
+        ACCESS_TOKEN=$(echo $RESPONSE | jq -r '.access_token')
+        if [ "$ACCESS_TOKEN" == "null" ]; then
+          echo "Failed to login to Supabase"
+          echo $RESPONSE
+          exit 1
+        fi
+        echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
+    - name: Update Forum ID in Supabase
+      run: |
+        DATE=$(TZ=Asia/Tokyo date -u +"%Y-%m-%d")
+        THREAD_ID=${{ env.THREAD_ID }}
+        ACCESS_TOKEN=${{ env.ACCESS_TOKEN }}
+        DATA=$(jq -n --arg date "$DATE" --arg thread_id "$THREAD_ID" '{"date":$date,"forum_id":$thread_id}')
+        curl -X PATCH "${{ secrets.SUPABASE_URL }}/rest/v1/${{ secrets.SUPABASE_DAILY_TABLE_NAME }}?id=eq.1" \
+          -H "Authorization: Bearer $ACCESS_TOKEN" \
+          -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
+          -H "Content-Type: application/json" \
+          -d "$DATA"
+          
+    - name: Logout from Supabase
+      if: success()
+      run: |
+        ACCESS_TOKEN=${{ env.ACCESS_TOKEN }}
+        curl -s -X POST "${{ secrets.SUPABASE_URL }}/auth/v1/logout" \
+          -H "Authorization: Bearer $ACCESS_TOKEN" \
+          -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
+          -H "Content-Type: application/json" \
+          -d '{}'
