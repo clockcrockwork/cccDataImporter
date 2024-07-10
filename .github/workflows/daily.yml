@@ -20,9 +20,10 @@ jobs:
           
           # GitHub APIを使用して当日のアクション実行結果を取得
           REPO="${GITHUB_REPOSITORY}"
-          DATE=$(TZ='Asia/Tokyo' date '+%Y-%m-%d')
+          # PREV_DATEとして、前日の15時1分から当日の15時0分までの間のアクション実行結果を取得
+          PREV_DATE=$(TZ='Asia/Tokyo' date -d 'yesterday 15:01' '+%Y-%m-%dT%H:%M:%SZ')
           ACTIONS_DATA=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${REPO}/actions/runs?created=${DATE}&per_page=100")
+            "https://api.github.com/repos/${REPO}/actions/runs?created=${PREV_DATE}&per_page=100")
 
           # ログに出力
           echo "$ACTIONS_DATA"
