@@ -261,7 +261,7 @@ async function main() {
         const results = await processFeeds(feeds);
 
         const updates = results.flatMap(result => result.updates);
-        const notifications = results.flatMap(result => result.notifications);
+        const notifications = results.flatMap(result => result.notifications).reverse();
         // 現在の日時で更新
         if (updates.length > 0) {
             const currentDateTimeStr = currentDateTime.toFormat('yyyy-MM-dd\'T\'HH:mm:ssZZ');
