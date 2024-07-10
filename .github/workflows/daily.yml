@@ -21,16 +21,21 @@ jobs:
           # 日本時間で現在時刻を取得
           TODAY=$(TZ='Asia/Tokyo' date '+%Y/%m/%d %H:%M:%S')
           
-          # GitHub APIを使用して当日のアクション実行結果を取得
+          # 前日の15:01から当日の15:00までの期間を設定
+          START_DATE=$(date -d 'yesterday 15:01' '+%Y-%m-%dT%H:%M:%SZ')
+          END_DATE=$(date -d 'today 15:00' '+%Y-%m-%dT%H:%M:%S.000Z')
+          
+          # GitHub APIを使用してアクション実行結果を取得
           REPO="${GITHUB_REPOSITORY}"
-          PREV_DATE=$(TZ='Asia/Tokyo' date -d 'yesterday 15:01' '+%Y-%m-%dT%H:%M:%SZ')
-          ACTIONS_DATA=$(curl -s -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
-            "https://api.github.com/repos/${REPO}/actions/runs?created=${PREV_DATE}&per_page=100")
+          ACTIONS_DATA=$(curl -s -H "Authorization: Bearer ${{ secrets.GH_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${REPO}/actions/runs?created=${START_DATE}..${END_DATE}&per_page=100")
           
           # ログに出力（デバッグ用）
           echo "API Response:"
           echo "$ACTIONS_DATA" | jq .
-
+          
           # アクション名、成功回数、失敗回数、実行時間、請求対象時間を集計
           ACTIONS_SUMMARY=$(echo "$ACTIONS_DATA" | jq -r '
             if .workflow_runs == null or ((.workflow_runs | type) != "array") or (.workflow_runs | length == 0) then
@@ -54,7 +59,7 @@ jobs:
           # ログに出力（デバッグ用）
           echo "Actions Summary:"
           echo "$ACTIONS_SUMMARY" | jq .
-
+          
           # daily.jsonを更新
           if [ "$ACTIONS_SUMMARY" = "null" ]; then
             jq --arg today "$TODAY" '.day = $today | .actions = null' daily.json | sponge daily.json
