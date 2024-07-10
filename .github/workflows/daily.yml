@@ -26,7 +26,7 @@ jobs:
           
           # アクション名、成功回数、失敗回数、実行時間、請求対象時間を集計
           ACTIONS_SUMMARY=$(echo "$ACTIONS_DATA" | jq -r '
-            if .workflow_runs == null or .workflow_runs | length == 0 then
+            if .workflow_runs == null or ((.workflow_runs | type) != "array") or (.workflow_runs | length == 0) then
               null
             else
               .workflow_runs
