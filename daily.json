@@ -1,5 +1,5 @@
 {
-  "day": "2024/07/12 00:06:59",
+  "day": "2024/07/13 00:07:09",
   "errors": 0,
   "actions": [
     {
@@ -24,16 +24,6 @@
     },
     {
       "action": "Daily Update",
-      "success": 1,
-      "failure": 0,
-      "duration": {
-        "sum": 0,
-        "avg": 0
-      },
-      "billable": 0
-    },
-    {
-      "action": "Fetch RSS Feeds",
       "success": 1,
       "failure": 0,
       "duration": {
