@@ -1,34 +1,52 @@
-name: Send What is today from Wikipedia to Discord
+name: Dify Workflow and Send to Discord
 
 on:
   schedule:
-    - cron: '10 15 * * *' # 日本時間の0:10に対応
-  workflow_dispatch:
+    - cron: '10 15 * * *'
 
 jobs:
-  send_today_wiki:
+  run-dify-workflow:
     runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.x'
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
 
-      - name: Install dependencies
-        run: |
-          cd packages/sendPy
-          python -m venv venv
-          source venv/bin/activate
-          pip install -r requirements.txt
+    - name: Cache Node.js dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          packages/getWhatsToday/node_modules
+          ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
 
-      - name: Send What is today from Wikipedia to Discord
-        env:
-          WIKI_DISCORD_WEBHOOK_URL: ${{ secrets.WIKI_DISCORD_WEBHOOK_URL }}
-          ERROR_WEBHOOK_URL: ${{ secrets.ERROR_WEBHOOK_URL }}
-        run: |
-          cd packages/sendPy
-          source venv/bin/activate
-          python send_today_wiki.py
+    - name: Set up environment variables
+      run: |
+        echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> $GITHUB_ENV
+        echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> $GITHUB_ENV
+        echo "SUPABASE_DAILY_TABLE_NAME=${{ secrets.SUPABASE_DAILY_TABLE_NAME }}" >> $GITHUB_ENV
+        echo "ERROR_WEBHOOK_URL=${{ secrets.ERROR_WEBHOOK_URL }}" >> $GITHUB_ENV
+        echo "SUPABASE_EMAIL=${{ secrets.SUPABASE_EMAIL }}" >> $GITHUB_ENV
+        echo "SUPABASE_PASSWORD=${{ secrets.SUPABASE_PASSWORD }}" >> $GITHUB_ENV
+        echo "DISCORD_DAILY_WEBHOOK_URL=${{ secrets.DISCORD_DAILY_WEBHOOK_URL }}" >> $GITHUB_ENV
+        echo "DIFY_WORKFLOW_URL=${{ secrets.DIFY_WORKFLOW_URL }}" >> $GITHUB_ENV
+        echo "DIFY_API_TOKEN=${{ secrets.DIFY_API_TOKEN }}" >> $GITHUB_ENV
+        echo "DIFY_USER=${{ secrets.DIFY_USER }}" >> $GITHUB_ENV
+        echo "DIFY_WORKFLOW_ID=${{ secrets.DIFY_WORKFLOW_ID }}" >> $GITHUB_ENV
+        
+    - name: Install dependencies
+      run: |
+        yarn install
+      working-directory: packages/getWhatsToday
+
+    - name: Run Notify What's Today wiki
+      run: |
+        node index.js
+      working-directory: packages/getWhatsToday
