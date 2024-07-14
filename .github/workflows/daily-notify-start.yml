@@ -3,6 +3,7 @@ name: Dify Workflow and Send to Discord
 on:
   schedule:
     - cron: '10 15 * * *'
+  workflow_dispatch:
 
 jobs:
   run-dify-workflow:
