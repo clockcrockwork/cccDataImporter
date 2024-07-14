@@ -1,8 +1,8 @@
 name: Notify Popular Products
 
 on:
-  # schedule:
-  #   - cron: '58 23 * * *'
+  schedule:
+   - cron: '58 23 * * *'
   workflow_dispatch:
 
 jobs:

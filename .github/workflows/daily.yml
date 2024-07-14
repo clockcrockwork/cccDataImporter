@@ -1,22 +1,66 @@
 name: Daily Update
 on:
   schedule:
-    - cron: '0 15 * * *' # UTCで毎日0時0分(日本時間で9時0分)に実行
+    - cron: '3 15 * * *' # UTCで15時1分(日本時間で0時1分)に実行
   workflow_dispatch:
 jobs:
   update-json:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         
-      - name: Install moreutils
-        run: sudo apt-get update && sudo apt-get install -y moreutils
+      - name: Install moreutils and jq
+        run: sudo apt-get update && sudo apt-get install -y moreutils jq
         
-      - name: Update day key in daily.json
+      - name: Update daily.json
         run: |
-          TODAY=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          jq --arg today "$TODAY" '.day = $today' daily.json | sponge daily.json
+          # 日本時間で現在時刻を取得
+          TODAY=$(TZ='Asia/Tokyo' date '+%Y/%m/%d %H:%M:%S')
+          
+          # 前日の15:01から当日の15:00までの期間を設定
+          START_DATE=$(date -d 'yesterday 15:01' '+%Y-%m-%dT%H:%M:%SZ')
+          END_DATE=$(date -d 'today 15:00' '+%Y-%m-%dT%H:%M:%S.000Z')
+          
+          REPO="${GITHUB_REPOSITORY}"
+          ACTIONS_DATA=$(curl -s -H "Authorization: Bearer ${{ secrets.GH_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${REPO}/actions/runs?created=${START_DATE}..${END_DATE}&per_page=100")
+          
+          ACTIONS_SUMMARY=$(echo "$ACTIONS_DATA" | jq -r '
+            if .workflow_runs == null or ((.workflow_runs | type) != "array") or (.workflow_runs | length == 0) then
+              null
+            else
+              .workflow_runs
+              | group_by(.name)
+              | map({
+                  action: .[0].name,
+                  success: map(select(.conclusion == "success")) | length,
+                  failure: map(select(.conclusion == "failure")) | length,
+                  duration: {
+                    sum: ((map(if .run_duration_ms != null then .run_duration_ms else 0 end) | add) / 1000),
+                    avg: ((map(if .run_duration_ms != null then .run_duration_ms else 0 end) | add) / (length * 1000))
+                  },
+                  billable: ((map(if .billable.UBUNTU.total_ms != null then .billable.UBUNTU.total_ms else 0 end) | add) / 60000)
+                })
+            end
+          ')
+          
+          # daily.jsonを更新
+          if [ "$ACTIONS_SUMMARY" = "null" ]; then
+            jq --arg today "$TODAY" '.day = $today | .actions = null' daily.json | sponge daily.json
+          else
+            jq --arg today "$TODAY" --argjson actions "$ACTIONS_SUMMARY" '
+              .day = $today |
+              .actions = $actions
+            ' daily.json | sponge daily.json
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         shell: bash
         
       - name: Commit changes
@@ -24,14 +68,14 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add daily.json
-          git commit -m 'Update day key in daily.json'
+          git commit -m 'Update daily.json'
         shell: bash
         
       - name: Create pull request
         uses: peter-evans/create-pull-request@v4
         with:
           token: ${{ secrets.GH_TOKEN }}
-          commit-message: 'Update day key in daily.json'
+          commit-message: 'Update daily.json'
           branch: 'update-daily-json'
           base: 'main' 
           title: 'Automated PR for daily.json update'

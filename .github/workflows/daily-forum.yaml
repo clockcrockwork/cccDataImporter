@@ -2,7 +2,7 @@ name: Create Daily Forum
 
 on:
   schedule:
-    - cron: '3 15 * * *'  # 日本標準時の午前0時に実行されます
+    - cron: '5 15 * * *'
   workflow_dispatch:
 
 jobs:
@@ -34,7 +34,6 @@ jobs:
           exit 1
         fi
         echo "THREAD_ID=$THREAD_ID" >> $GITHUB_ENV
-
     - name: Login to Supabase
       id: login_supabase
       run: |
@@ -52,7 +51,6 @@ jobs:
           exit 1
         fi
         echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
-
     - name: Update Forum ID in Supabase
       run: |
         DATE=$(TZ=Asia/Tokyo date -u +"%Y-%m-%d")
