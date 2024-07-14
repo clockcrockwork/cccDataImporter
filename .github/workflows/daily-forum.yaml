@@ -13,7 +13,7 @@ jobs:
     - name: Create Forum Thread in Discord
       id: create_discord_forum
       run: |
-        DATE=$(TZ=Asia/Tokyo date -u +"%Y/%m/%d")
+        DATE=$(TZ=Asia/Tokyo date +"%Y/%m/%d")
         RESPONSE=$(curl -s -X POST "https://discord.com/api/v10/channels/${{ secrets.DISCORD_DAILY_CHANNEL_ID }}/threads" \
           -H "Authorization: Bot ${{ secrets.DISCORD_BOT_TOKEN }}" \
           -H "Content-Type: application/json" \
@@ -53,7 +53,7 @@ jobs:
         echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
     - name: Update Forum ID in Supabase
       run: |
-        DATE=$(TZ=Asia/Tokyo date -u +"%Y-%m-%d")
+        DATE=$(TZ=Asia/Tokyo date +"%Y/%m/%d")
         THREAD_ID=${{ env.THREAD_ID }}
         ACCESS_TOKEN=${{ env.ACCESS_TOKEN }}
         DATA=$(jq -n --arg date "$DATE" --arg thread_id "$THREAD_ID" '{"date":$date,"forum_id":$thread_id}')
