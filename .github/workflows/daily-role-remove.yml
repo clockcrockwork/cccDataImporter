@@ -1,0 +1,27 @@
+name: Discord Daily Role Remove
+
+on:
+  # schedule:
+  #   - cron: "0 15 * * *"
+  workflow_dispatch:
+
+jobs:
+  discord_daily_role_remove:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get Users
+        id: get_users
+        run: |
+          curl -X GET -H "Authorization: Bot ${{ secrets.DISCORD_TOKEN }}" https://discord.com/api/guilds/${{ secrets.DISCORD_SERVER_ID }}/members
+           | jq '.'
+
+      - name: Remove Login Role
+        id: remove_login_role
+        run: |
+          jq '.[]
+           | select(.roles[] == "${{ secrets.DISCORD_ROLE_USERS }}")
+           | .user.id' ${{ steps.get_users.outputs.stdout }}
+           | xargs -I {} curl -X DELETE -H "Authorization: Bot ${{ secrets.DISCORD_TOKEN }}" https://discord.com/api/guilds/${{ secrets.DISCORD_SERVER_ID }}/members/{}/roles/123456789012345678
