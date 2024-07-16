@@ -1,5 +1,5 @@
 {
-  "day": "2024/07/16 00:10:31",
+  "day": "2024/07/17 00:10:06",
   "errors": 0,
   "actions": [
     {
@@ -14,7 +14,7 @@
     },
     {
       "action": "Create Daily Forum",
-      "success": 3,
+      "success": 1,
       "failure": 0,
       "duration": {
         "sum": 0,
@@ -34,17 +34,7 @@
     },
     {
       "action": "Dify Workflow and Send to Discord",
-      "success": 2,
-      "failure": 0,
-      "duration": {
-        "sum": 0,
-        "avg": 0
-      },
-      "billable": 0
-    },
-    {
-      "action": "Fetch RSS Feeds",
-      "success": 5,
+      "success": 1,
       "failure": 0,
       "duration": {
         "sum": 0,
