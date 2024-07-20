@@ -2,7 +2,7 @@ name: Create Daily Forum
 
 on:
   schedule:
-    - cron: '5 15 * * *'
+    - cron: "5 15 * * *"
   workflow_dispatch:
 
 jobs:
@@ -10,65 +10,87 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Create Forum Thread in Discord
-      id: create_discord_forum
-      run: |
-        DATE=$(TZ=Asia/Tokyo date +"%Y/%m/%d")
-        RESPONSE=$(curl -s -X POST "https://discord.com/api/v10/channels/${{ secrets.DISCORD_DAILY_CHANNEL_ID }}/threads" \
-          -H "Authorization: Bot ${{ secrets.DISCORD_BOT_TOKEN }}" \
-          -H "Content-Type: application/json" \
-          -d '{
-            "name": "'"$DATE"'",
-            "auto_archive_duration": 1440,
-            "type": 11,
-            "message": {
-              "content": "'"$DATE"'",
-              "embeds": [],
-              "components": []
-            }
-          }')
-        THREAD_ID=$(echo $RESPONSE | jq -r '.id')
-        if [ "$THREAD_ID" == "null" ]; then
-          echo "Failed to create forum thread"
-          echo $RESPONSE
-          exit 1
-        fi
-        echo "THREAD_ID=$THREAD_ID" >> $GITHUB_ENV
-    - name: Login to Supabase
-      id: login_supabase
-      run: |
-        RESPONSE=$(curl -s -X POST "${{ secrets.SUPABASE_URL }}/auth/v1/token?grant_type=password" \
-          -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
-          -H "Content-Type: application/json" \
-          -d '{
-            "email": "'"${{ secrets.SUPABASE_EMAIL }}"'",
-            "password": "'"${{ secrets.SUPABASE_PASSWORD }}"'"
-          }')
-        ACCESS_TOKEN=$(echo $RESPONSE | jq -r '.access_token')
-        if [ "$ACCESS_TOKEN" == "null" ]; then
-          echo "Failed to login to Supabase"
-          echo $RESPONSE
-          exit 1
-        fi
-        echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
-    - name: Update Forum ID in Supabase
-      run: |
-        DATE=$(TZ=Asia/Tokyo date +"%Y/%m/%d")
-        THREAD_ID=${{ env.THREAD_ID }}
-        ACCESS_TOKEN=${{ env.ACCESS_TOKEN }}
-        DATA=$(jq -n --arg date "$DATE" --arg thread_id "$THREAD_ID" '{"date":$date,"forum_id":$thread_id}')
-        curl -X PATCH "${{ secrets.SUPABASE_URL }}/rest/v1/${{ secrets.SUPABASE_DAILY_TABLE_NAME }}?id=eq.1" \
-          -H "Authorization: Bearer $ACCESS_TOKEN" \
-          -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
-          -H "Content-Type: application/json" \
-          -d "$DATA"
-          
-    - name: Logout from Supabase
-      if: success()
-      run: |
-        ACCESS_TOKEN=${{ env.ACCESS_TOKEN }}
-        curl -s -X POST "${{ secrets.SUPABASE_URL }}/auth/v1/logout" \
-          -H "Authorization: Bearer $ACCESS_TOKEN" \
-          -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
-          -H "Content-Type: application/json" \
-          -d '{}'
+      - name: Fetch previous day's thread ID from Supabase
+        id: fetch_previous_thread_id
+        run: |
+          RESPONSE=$(curl -s -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/${{ secrets.SUPABASE_DAILY_TABLE_NAME }}?id=eq.1" \
+            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
+            -H "Content-Type: application/json")
+          PREVIOUS_THREAD_ID=$(echo $RESPONSE | jq -r '.[0].forum_id')
+          if [ "$PREVIOUS_THREAD_ID" == "null" ]; then
+            echo "Failed to fetch previous thread ID"
+            echo $RESPONSE
+            exit 1
+          fi
+          echo "PREVIOUS_THREAD_ID=$PREVIOUS_THREAD_ID" >> $GITHUB_ENV
+
+      - name: Close and Lock previous day's thread
+        if: success()
+        run: |
+          curl -s -X PATCH "https://discord.com/api/v10/channels/${{ secrets.DISCORD_DAILY_CHANNEL_ID }}/threads/${{ env.PREVIOUS_THREAD_ID }}" \
+            -H "Authorization: Bot ${{ secrets.DISCORD_BOT_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"archived": true, "locked": true}'
+
+      - name: Create Forum Thread in Discord
+        id: create_discord_forum
+        run: |
+          DATE=$(TZ=Asia/Tokyo date +"%Y/%m/%d")
+          RESPONSE=$(curl -s -X POST "https://discord.com/api/v10/channels/${{ secrets.DISCORD_DAILY_CHANNEL_ID }}/threads" \
+            -H "Authorization: Bot ${{ secrets.DISCORD_BOT_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "name": "'"$DATE"'",
+              "auto_archive_duration": 1440,
+              "type": 11,
+              "message": {
+                "content": "'"$DATE"'",
+                "embeds": [],
+                "components": []
+              }
+            }')
+          THREAD_ID=$(echo $RESPONSE | jq -r '.id')
+          if [ "$THREAD_ID" == "null" ]; then
+            echo "Failed to create forum thread"
+            echo $RESPONSE
+            exit 1
+          fi
+          echo "THREAD_ID=$THREAD_ID" >> $GITHUB_ENV
+      - name: Login to Supabase
+        id: login_supabase
+        run: |
+          RESPONSE=$(curl -s -X POST "${{ secrets.SUPABASE_URL }}/auth/v1/token?grant_type=password" \
+            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "email": "'"${{ secrets.SUPABASE_EMAIL }}"'",
+              "password": "'"${{ secrets.SUPABASE_PASSWORD }}"'"
+            }')
+          ACCESS_TOKEN=$(echo $RESPONSE | jq -r '.access_token')
+          if [ "$ACCESS_TOKEN" == "null" ]; then
+            echo "Failed to login to Supabase"
+            echo $RESPONSE
+            exit 1
+          fi
+          echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
+      - name: Update Forum ID in Supabase
+        run: |
+          DATE=$(TZ=Asia/Tokyo date +"%Y/%m/%d")
+          THREAD_ID=${{ env.THREAD_ID }}
+          ACCESS_TOKEN=${{ env.ACCESS_TOKEN }}
+          DATA=$(jq -n --arg date "$DATE" --arg thread_id "$THREAD_ID" '{"date":$date,"forum_id":$thread_id}')
+          curl -X PATCH "${{ secrets.SUPABASE_URL }}/rest/v1/${{ secrets.SUPABASE_DAILY_TABLE_NAME }}?id=eq.1" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d "$DATA"
+
+      - name: Logout from Supabase
+        if: success()
+        run: |
+          ACCESS_TOKEN=${{ env.ACCESS_TOKEN }}
+          curl -s -X POST "${{ secrets.SUPABASE_URL }}/auth/v1/logout" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{}'
