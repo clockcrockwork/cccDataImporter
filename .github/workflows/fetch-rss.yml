@@ -2,7 +2,7 @@ name: Fetch RSS Feeds
 
 on:
   # schedule:
-  #   - cron: '*/5 * * * *' # 5分ごとに実行
+  #   - cron: '*/15 * * * *' # 5分ごとに実行
   workflow_dispatch:
 
 jobs:
