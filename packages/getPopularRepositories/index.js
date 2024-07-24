@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { decode } from 'html-entities';
 import fetch from 'node-fetch';
+import { Console } from 'console';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -48,36 +49,32 @@ async function fetchGitHubTrends() {
     const urls = [
         `${GIT_REPOSITORY_FEED_URL}/daily/javascript`,
         `${GIT_REPOSITORY_FEED_URL}/daily/css`,
-        `${GIT_REPOSITORY_FEED_URL}/daily/fediverse`,
-        `${GIT_REPOSITORY_FEED_URL}/daily/frontend`,
-        `${GIT_REPOSITORY_FEED_URL}/daily/game-engine`,
-        `${GIT_REPOSITORY_FEED_URL}/daily/framework`,
-        `${GIT_REPOSITORY_FEED_URL}/daily/open-source`,
+        `${GIT_REPOSITORY_FEED_URL}/daily/astro`,
+        `${GIT_REPOSITORY_FEED_URL}/daily/dart`,
+        `${GIT_REPOSITORY_FEED_URL}/daily/dockerfile`,
+        `${GIT_REPOSITORY_FEED_URL}/daily/haskell`,
+        `${GIT_REPOSITORY_FEED_URL}/daily/json`,
         `${GIT_REPOSITORY_FEED_URL}/daily/typescript`,
-        `${GIT_REPOSITORY_FEED_URL}/daily/editor`,
+        `${GIT_REPOSITORY_FEED_URL}/daily/kotlin`,
         `${GIT_REPOSITORY_FEED_URL}/daily/html`,
-        `${GIT_REPOSITORY_FEED_URL}/daily/font`,
-        `${GIT_REPOSITORY_FEED_URL}/daily/emoji`,
-        `${GIT_REPOSITORY_FEED_URL}/daily/database`,
-        `${GIT_REPOSITORY_FEED_URL}/daily/bot`,
-        `${GIT_REPOSITORY_FEED_URL}/daily/api`,
-        `${GIT_REPOSITORY_FEED_URL}/daily/chrome-extension`,
-        `${GIT_REPOSITORY_FEED_URL}/daily/renderless-components`,
-        `${GIT_REPOSITORY_FEED_URL}/daily/wysiwyg-editor`,
+        `${GIT_REPOSITORY_FEED_URL}/daily/python`,
+        `${GIT_REPOSITORY_FEED_URL}/daily/rich-text-format`,
+        `${GIT_REPOSITORY_FEED_URL}/daily/rust`,
+        `${GIT_REPOSITORY_FEED_URL}/daily/scala`,
+        `${GIT_REPOSITORY_FEED_URL}/daily/scheme`,
+        `${GIT_REPOSITORY_FEED_URL}/daily/smarty`,
+        `${GIT_REPOSITORY_FEED_URL}/daily/svg`,
+        `${GIT_REPOSITORY_FEED_URL}/daily/swift`,
         `${GIT_REPOSITORY_FEED_URL}/daily/markdown`,
-        `${GIT_REPOSITORY_FEED_URL}/daily/docker`,
-        `${GIT_REPOSITORY_FEED_URL}/daily/nodejs`,
-        `${GIT_REPOSITORY_FEED_URL}/daily/p2p`,
+        `${GIT_REPOSITORY_FEED_URL}/daily/tex`,
+        `${GIT_REPOSITORY_FEED_URL}/daily/typescript`,
         `${GIT_REPOSITORY_FEED_URL}/daily/vue`,
-        `${GIT_REPOSITORY_FEED_URL}/daily/webapp`,
-        `${GIT_REPOSITORY_FEED_URL}/daily/headless-cms`,
-        `${GIT_REPOSITORY_FEED_URL}/daily/self-hosted`,
-        `${GIT_REPOSITORY_FEED_URL}/daily/hosting`,
-        `${GIT_REPOSITORY_FEED_URL}/daily/websocket`,
         `${GIT_REPOSITORY_FEED_URL}/daily/php`
     ];
     
-    const responses = await Promise.all(urls.map(url => fetch(`${url}?format=json`).then(res => res.json())));
+    
+
+    const responses = await Promise.all(urls.map(url => fetch(`${url}/en?format=json`).then(res => res.json())));
     const items = responses.flatMap(response => response.items);
     return items;
 }
