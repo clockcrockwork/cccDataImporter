@@ -74,7 +74,7 @@ async function fetchGitHubTrends() {
     
     
 
-    const responses = await Promise.all(urls.map(url => fetch(`${url}/en?format=json`).then(res => res.json())));
+    const responses = await Promise.allSettled(urls.map(url => fetch(url).then(response => response.json())));
     const items = responses.flatMap(response => response.items);
     return items;
 }
