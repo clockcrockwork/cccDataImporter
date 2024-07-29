@@ -109,7 +109,7 @@ function extractImages(content_html) {
 
 function formatDiscordMessages(posts) {
     return posts.slice(0, 10).map((post, index) => {
-        console.log(post);
+
         const section = post.content_html.split('<br>')[0];
         const description = section.startsWith('<img') ? decode(post.content_html.split('<br>')[1]) : decode(section);
         const images = extractImages(post.content_html);
