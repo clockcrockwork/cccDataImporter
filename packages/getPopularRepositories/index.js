@@ -72,10 +72,29 @@ async function fetchGitHubTrends() {
         `${GIT_REPOSITORY_FEED_URL}/daily/php`
     ];
     
-    
+    const responses = await Promise.allSettled(
+        urls.map(url => {
+            const setURL = url + '/en?format=json';
+            return fetch(setURL)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Failed to fetch ${setURL}, status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    return data;
+                })
+                .catch(error => {
+                    console.log(error);
+                    throw new Error(`Failed to fetch ${setURL}, error: ${error.message}`);
+                });
+        })
+    );
 
-    const responses = await Promise.allSettled(urls.map(url => fetch(url+'/en?format=json').then(response => response.json())));
-    const items = responses.flatMap(response => response.items);
+    const items = responses
+        .filter(response => response.status === 'fulfilled')
+        .flatMap(response => response.value.items || []);
     return items;
 }
 
@@ -90,6 +109,7 @@ function extractImages(content_html) {
 
 function formatDiscordMessages(posts) {
     return posts.slice(0, 10).map((post, index) => {
+        console.log(post);
         const section = post.content_html.split('<br>')[0];
         const description = section.startsWith('<img') ? decode(post.content_html.split('<br>')[1]) : decode(section);
         const images = extractImages(post.content_html);
