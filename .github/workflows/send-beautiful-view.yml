@@ -1,0 +1,36 @@
+name: Send Beautiful View
+
+on:
+  # schedule:
+  #   - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  send_beautiful_view:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          cd packages/sendPy
+          python -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+
+      - name: Send beautiful view image to Discord
+        env:
+          BEAUTIFULVIEW_DISCORD_WEBHOOK_URL: ${{ secrets.BEAUTIFULVIEW_DISCORD_WEBHOOK_URL }}
+          ERROR_WEBHOOK_URL: ${{ secrets.ERROR_WEBHOOK_URL }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          FLICKR_API_KEY: ${{ secrets.FLICKR_API_KEY }}
+        run: |
+          cd packages/sendPy
+          source venv/bin/activate
+          python send_beautiful_view.py
