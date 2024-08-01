@@ -27,7 +27,7 @@ jobs:
       - name: Close and Lock previous day's thread
         if: success()
         run: |
-          curl -s -X PATCH "https://discord.com/api/v10/channels/${{ secrets.DISCORD_DAILY_CHANNEL_ID }}/threads/${{ env.PREVIOUS_THREAD_ID }}" \
+          curl -s -X PATCH "https://discord.com/api/v10/channels/${{ env.PREVIOUS_THREAD_ID }}" \
             -H "Authorization: Bot ${{ secrets.DISCORD_BOT_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{"archived": true, "locked": true}'
