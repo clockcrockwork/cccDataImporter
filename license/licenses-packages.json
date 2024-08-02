@@ -1,39 +1,66 @@
+
+> aliceBlogChecker
+$ /workspaces/cccDataImporter/node_modules/.bin/license-checker --summary --production --json
 {
   "aliceBlogChecker@1.0.0": {
     "licenses": "BSD-2-Clause",
     "path": "/workspaces/cccDataImporter/packages/aliceBlogChecker"
   }
 }
-{
-  "extentions@1.0.0": {
-    "licenses": "BSD-2-Clause",
-    "path": "/workspaces/cccDataImporter/packages/extentions"
-  }
-}
+
+
+> fetchRss
+$ /workspaces/cccDataImporter/node_modules/.bin/license-checker --summary --production --json
 {
   "fetchRss@1.0.0": {
     "licenses": "BSD-2-Clause",
     "path": "/workspaces/cccDataImporter/packages/fetchRss"
   }
 }
+
+
+> getPopularProducts
+$ /workspaces/cccDataImporter/node_modules/.bin/license-checker --summary --production --json
 {
   "getPopularProducts@1.0.0": {
     "licenses": "BSD-2-Clause",
     "path": "/workspaces/cccDataImporter/packages/getPopularProducts"
   }
 }
+
+
+> getPopularRepositories
+$ /workspaces/cccDataImporter/node_modules/.bin/license-checker --summary --production --json
 {
   "getPopularRepositories@1.0.0": {
     "licenses": "BSD-2-Clause",
     "path": "/workspaces/cccDataImporter/packages/getPopularRepositories"
   }
 }
+
+
+> getWhatsToday
+$ /workspaces/cccDataImporter/node_modules/.bin/license-checker --summary --production --json
+{
+  "getWhatsToday@1.0.0": {
+    "licenses": "BSD-2-Clause",
+    "path": "/workspaces/cccDataImporter/packages/getWhatsToday"
+  }
+}
+
+
+> notifyDiscord
+$ /workspaces/cccDataImporter/node_modules/.bin/license-checker --summary --production --json
 {
   "notifyDiscord@1.0.0": {
     "licenses": "BSD-2-Clause",
     "path": "/workspaces/cccDataImporter/packages/notifyDiscord"
   }
 }
+
+
+> sendPyCat
+$ /workspaces/cccDataImporter/node_modules/.bin/license-checker --summary --production --json
 {
   "sendPyCat@1.0.0": {
     "licenses": "BSD-2-Clause",

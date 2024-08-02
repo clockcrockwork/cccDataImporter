@@ -79,7 +79,7 @@
     "path": "/workspaces/cccDataImporter/node_modules/@types/jest",
     "licenseFile": "/workspaces/cccDataImporter/node_modules/@types/jest/LICENSE"
   },
-  "@types/node@20.14.10": {
+  "@types/node@22.0.2": {
     "licenses": "MIT",
     "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
     "path": "/workspaces/cccDataImporter/node_modules/@types/node",
@@ -158,7 +158,8 @@
     "private": true,
     "repository": "https://github.com/clockcrockwork/cccDataImporter",
     "publisher": "clockcrockwork",
-    "path": "/workspaces/cccDataImporter"
+    "path": "/workspaces/cccDataImporter",
+    "licenseFile": "/workspaces/cccDataImporter/LICENSE"
   },
   "chalk@2.4.2": {
     "licenses": "MIT",
@@ -213,20 +214,6 @@
     "path": "/workspaces/cccDataImporter/node_modules/color-name",
     "licenseFile": "/workspaces/cccDataImporter/node_modules/color-name/LICENSE"
   },
-  "color-string@1.9.1": {
-    "licenses": "MIT",
-    "repository": "https://github.com/Qix-/color-string",
-    "publisher": "Heather Arthur",
-    "email": "fayearthur@gmail.com",
-    "path": "/workspaces/cccDataImporter/node_modules/color-string",
-    "licenseFile": "/workspaces/cccDataImporter/node_modules/color-string/LICENSE"
-  },
-  "color@4.2.3": {
-    "licenses": "MIT",
-    "repository": "https://github.com/Qix-/color",
-    "path": "/workspaces/cccDataImporter/node_modules/color",
-    "licenseFile": "/workspaces/cccDataImporter/node_modules/color/LICENSE"
-  },
   "core-util-is@1.0.3": {
     "licenses": "MIT",
     "repository": "https://github.com/isaacs/core-util-is",
@@ -250,14 +237,6 @@
     "repository": "https://github.com/TehShrike/deepmerge",
     "path": "/workspaces/cccDataImporter/node_modules/deepmerge",
     "licenseFile": "/workspaces/cccDataImporter/node_modules/deepmerge/license.txt"
-  },
-  "detect-libc@2.0.3": {
-    "licenses": "Apache-2.0",
-    "repository": "https://github.com/lovell/detect-libc",
-    "publisher": "Lovell Fuller",
-    "email": "npm@lovell.info",
-    "path": "/workspaces/cccDataImporter/node_modules/detect-libc",
-    "licenseFile": "/workspaces/cccDataImporter/node_modules/detect-libc/LICENSE"
   },
   "diff-sequences@29.6.3": {
     "licenses": "MIT",
@@ -420,14 +399,6 @@
     "repository": "https://github.com/isaacs/inherits",
     "path": "/workspaces/cccDataImporter/node_modules/inherits",
     "licenseFile": "/workspaces/cccDataImporter/node_modules/inherits/LICENSE"
-  },
-  "is-arrayish@0.3.2": {
-    "licenses": "MIT",
-    "repository": "https://github.com/qix-/node-is-arrayish",
-    "publisher": "Qix",
-    "url": "http://github.com/qix-",
-    "path": "/workspaces/cccDataImporter/node_modules/simple-swizzle/node_modules/is-arrayish",
-    "licenseFile": "/workspaces/cccDataImporter/node_modules/simple-swizzle/node_modules/is-arrayish/LICENSE"
   },
   "is-number@7.0.0": {
     "licenses": "MIT",
@@ -644,29 +615,6 @@
     "path": "/workspaces/cccDataImporter/node_modules/selderee",
     "licenseFile": "/workspaces/cccDataImporter/node_modules/selderee/LICENSE"
   },
-  "semver@7.6.2": {
-    "licenses": "ISC",
-    "repository": "https://github.com/npm/node-semver",
-    "publisher": "GitHub Inc.",
-    "path": "/workspaces/cccDataImporter/node_modules/semver",
-    "licenseFile": "/workspaces/cccDataImporter/node_modules/semver/LICENSE"
-  },
-  "sharp@0.33.4": {
-    "licenses": "Apache-2.0",
-    "repository": "https://github.com/lovell/sharp",
-    "publisher": "Lovell Fuller",
-    "email": "npm@lovell.info",
-    "path": "/workspaces/cccDataImporter/node_modules/sharp",
-    "licenseFile": "/workspaces/cccDataImporter/node_modules/sharp/LICENSE"
-  },
-  "simple-swizzle@0.2.2": {
-    "licenses": "MIT",
-    "repository": "https://github.com/qix-/node-simple-swizzle",
-    "publisher": "Qix",
-    "url": "http://github.com/qix-",
-    "path": "/workspaces/cccDataImporter/node_modules/simple-swizzle",
-    "licenseFile": "/workspaces/cccDataImporter/node_modules/simple-swizzle/LICENSE"
-  },
   "slash@3.0.0": {
     "licenses": "MIT",
     "repository": "https://github.com/sindresorhus/slash",
@@ -717,11 +665,11 @@
     "path": "/workspaces/cccDataImporter/node_modules/to-regex-range",
     "licenseFile": "/workspaces/cccDataImporter/node_modules/to-regex-range/LICENSE"
   },
-  "undici-types@5.26.5": {
+  "undici-types@6.11.1": {
     "licenses": "MIT",
     "repository": "https://github.com/nodejs/undici",
     "path": "/workspaces/cccDataImporter/node_modules/undici-types",
-    "licenseFile": "/workspaces/cccDataImporter/node_modules/undici-types/README.md"
+    "licenseFile": "/workspaces/cccDataImporter/node_modules/undici-types/LICENSE"
   },
   "util-deprecate@1.0.2": {
     "licenses": "MIT",
