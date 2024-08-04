@@ -1,5 +1,5 @@
 {
-  "day": "2024/08/02 00:10:02",
+  "day": "2024/08/05 00:10:15",
   "errors": 0,
   "actions": [
     {
@@ -34,16 +34,6 @@
     },
     {
       "action": "Dify Workflow and Send to Discord",
-      "success": 1,
-      "failure": 0,
-      "duration": {
-        "sum": 0,
-        "avg": 0
-      },
-      "billable": 0
-    },
-    {
-      "action": "Fetch RSS Feeds",
       "success": 1,
       "failure": 0,
       "duration": {
