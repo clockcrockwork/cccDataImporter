@@ -1,0 +1,19 @@
+version: 2
+updates:
+  # モノリポ内のすべてのYarnパッケージの更新
+  - package-ecosystem: "yarn"
+    directory: "/packages"
+    schedule:
+      interval: "weekly" # 週次で更新を確認
+
+  # Pythonパッケージの更新（GitHub Actions用）
+  - package-ecosystem: "pip"
+    directory: "/.github/workflows" # workflowsフォルダ内のPythonパッケージを対象
+    schedule:
+      interval: "weekly" # 週次で更新を確認
+
+  # Node.jsパッケージの更新（GitHub Actions用）
+  - package-ecosystem: "npm"
+    directory: "/.github/workflows" # workflowsフォルダ内のNode.jsパッケージを対象
+    schedule:
+      interval: "weekly" # 週次で更新を確認
