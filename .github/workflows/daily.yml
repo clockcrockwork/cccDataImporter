@@ -80,7 +80,7 @@ jobs:
           token: ${{ secrets.GH_TOKEN }}
           commit-message: "Update daily.json"
           branch: "update-daily-json"
-          base: "main"
+          base: "origin"
           title: "Automated PR for daily.json update"
           body: "This PR is automatically created by GitHub Actions."
           labels: "automated-pr"
