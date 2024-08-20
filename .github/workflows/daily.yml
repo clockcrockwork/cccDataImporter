@@ -75,7 +75,7 @@ jobs:
         shell: bash
 
       - name: Create pull request
-        uses: peter-evans/create-pull-request@v4
+        uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GH_TOKEN }}
           commit-message: "Update daily.json"
@@ -85,8 +85,11 @@ jobs:
           body: "This PR is automatically created by GitHub Actions."
           labels: "automated-pr"
           merge: "squash"
-      - name: Enable auto-merge
-        uses: peter-evans/enable-pull-request-automerge@v3
-        with:
-          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
-          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Auto-merge pull request
+        if: steps.cpr.outputs.pull-request-number
+        run: |
+          gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --merge --auto --delete-branch --admin
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
