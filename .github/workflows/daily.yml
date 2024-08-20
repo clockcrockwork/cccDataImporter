@@ -89,7 +89,7 @@ jobs:
       - name: Auto-merge pull request
         if: steps.cpr.outputs.pull-request-number
         run: |
-          gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --squash --auto --delete-branch --admin
+          gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --squash --auto --delete-branch
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
