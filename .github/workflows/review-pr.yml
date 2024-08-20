@@ -1,22 +1,25 @@
-name: Review PR
+name: Auto approve
 
 on:
-  pull_request:
+  pull_request_target:
     types:
       - opened
       - labeled
+      - unlabeled
+      - synchronize
 
 jobs:
-  review:
-    environment: actions
+  auto-approve:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
-    if: >-
-      github.event.label.name == 'automated-pr' &&
-      github.event.pull_request.user.login == 'github-actions[bot]'
+    if: |
+      (contains(github.event.pull_request.labels.*.name, 'automated-pr') &&
+       (github.event.pull_request.user.login == 'github-actions[bot]' ||
+        github.event.pull_request.user.login == 'dependabot[bot]'))
+       || github.event.pull_request.user.login == github.repository_owner
     steps:
-      - name: Review
-        uses: hmarr/auto-approve-action@v3
+      - name: Auto approve
+        uses: hmarr/auto-approve-action@v4
         with:
-          github-token: ${{ secrets.GH_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
