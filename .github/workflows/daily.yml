@@ -10,8 +10,18 @@ jobs:
       contents: write
       actions: read
     steps:
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          ref: ${{ github.head_ref }}
+          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -29,7 +39,7 @@ jobs:
           END_DATE=$(date -d 'today 15:00' '+%Y-%m-%dT%H:%M:%S.000Z')
 
           REPO="${GITHUB_REPOSITORY}"
-          ACTIONS_DATA=$(curl -s -H "Authorization: Bearer ${{ secrets.GH_TOKEN }}" \
+          ACTIONS_DATA=$(curl -s -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/repos/${REPO}/actions/runs?created=${START_DATE}..${END_DATE}&per_page=100")
@@ -63,7 +73,7 @@ jobs:
             ' daily.json | sponge daily.json
           fi
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         shell: bash
 
       - name: Import GPG key
@@ -88,7 +98,7 @@ jobs:
         id: cpr
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.GH_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           commit-message: "Update daily.json"
           branch: "update-daily-json"
           base: "origin"
@@ -101,5 +111,5 @@ jobs:
         run: |
           gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --squash --auto --delete-branch
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
