@@ -23,5 +23,3 @@ jobs:
         uses: hmarr/auto-approve-action@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-
-上記のワークフロー
