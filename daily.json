@@ -1,10 +1,30 @@
 {
-  "day": "2024/08/20 00:09:59",
+  "day": "2024/08/29 13:52:05",
   "errors": 0,
   "actions": [
     {
+      "action": ".github/workflows/review-pr.yml",
+      "success": 0,
+      "failure": 1,
+      "duration": {
+        "sum": 0,
+        "avg": 0
+      },
+      "billable": 0
+    },
+    {
       "action": "Alice Blog Checker",
-      "success": 13,
+      "success": 14,
+      "failure": 0,
+      "duration": {
+        "sum": 0,
+        "avg": 0
+      },
+      "billable": 0
+    },
+    {
+      "action": "Auto approve",
+      "success": 4,
       "failure": 0,
       "duration": {
         "sum": 0,
@@ -14,17 +34,7 @@
     },
     {
       "action": "Daily Update",
-      "success": 0,
-      "failure": 3,
-      "duration": {
-        "sum": 0,
-        "avg": 0
-      },
-      "billable": 0
-    },
-    {
-      "action": "Fetch RSS Feeds",
-      "success": 51,
+      "success": 2,
       "failure": 0,
       "duration": {
         "sum": 0,
@@ -33,8 +43,38 @@
       "billable": 0
     },
     {
-      "action": "Review PR",
-      "success": 0,
+      "action": "Dify Workflow and Send to Discord",
+      "success": 1,
+      "failure": 0,
+      "duration": {
+        "sum": 0,
+        "avg": 0
+      },
+      "billable": 0
+    },
+    {
+      "action": "Fetch RSS Feeds",
+      "success": 49,
+      "failure": 0,
+      "duration": {
+        "sum": 0,
+        "avg": 0
+      },
+      "billable": 0
+    },
+    {
+      "action": "Notify Popular Products",
+      "success": 1,
+      "failure": 0,
+      "duration": {
+        "sum": 0,
+        "avg": 0
+      },
+      "billable": 0
+    },
+    {
+      "action": "Notify Popular Repositories",
+      "success": 1,
       "failure": 0,
       "duration": {
         "sum": 0,
