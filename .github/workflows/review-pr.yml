@@ -15,7 +15,7 @@ jobs:
       pull-requests: write
     if: |
       (contains(github.event.pull_request.labels.*.name, 'automated-pr') &&
-       (github.event.pull_request.user.login == 'github-actions[bot]' ||
+       (github.event.pull_request.user.login == 'dataupdate-merge[bot]' ||
         github.event.pull_request.user.login == 'dependabot[bot]'))
        || github.event.pull_request.user.login == github.repository_owner
     steps:
@@ -23,3 +23,5 @@ jobs:
         uses: hmarr/auto-approve-action@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+上記のワークフロー
