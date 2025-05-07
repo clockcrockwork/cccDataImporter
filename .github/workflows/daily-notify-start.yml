@@ -5,6 +5,9 @@ on:
     - cron: '10 15 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   run-dify-workflow:
     runs-on: ubuntu-latest
