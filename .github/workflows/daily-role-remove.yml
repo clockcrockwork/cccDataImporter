@@ -5,6 +5,9 @@ on:
   #   - cron: "0 15 * * *"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   discord_daily_role_remove:
     runs-on: ubuntu-latest
