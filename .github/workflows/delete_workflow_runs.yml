@@ -8,6 +8,10 @@ on:
         required: true
         default: '1'
 
+permissions:
+  actions: write
+  contents: read
+
 jobs:
   delete_runs:
     runs-on: ubuntu-latest

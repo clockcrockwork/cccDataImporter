@@ -1,5 +1,8 @@
 name: Fetch RSS Feeds
 
+permissions:
+  contents: read
+
 on:
   schedule:
     - cron: '*/15 * * * *'

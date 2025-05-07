@@ -1,5 +1,8 @@
 name: Notify Popular Products
 
+permissions:
+  contents: read
+
 on:
   schedule:
    - cron: '58 23 * * *'
