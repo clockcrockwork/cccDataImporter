@@ -5,6 +5,9 @@ on:
     - cron: "5 15 * * *"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   fetch-data-and-create-forum:
     runs-on: ubuntu-latest
