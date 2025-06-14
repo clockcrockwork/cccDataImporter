@@ -9,7 +9,7 @@
     "test": "jest"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.44.3",
+    "@supabase/supabase-js": "^2.50.0",
     "dotenv": "^16.4.5",
     "html-entities": "^2.5.2",
     "node-fetch": "^3.3.2"
