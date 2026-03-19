@@ -2,5 +2,11 @@
   "name": "common",
   "version": "1.0.0",
   "type": "module",
-  "main": "httpClient.js"
+  "main": "httpClient.js",
+  "scripts": {
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  }
 }

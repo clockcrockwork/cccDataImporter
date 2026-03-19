@@ -68,7 +68,6 @@ async function fetchGitHubTrends() {
     `${GIT_REPOSITORY_FEED_URL}/daily/swift`,
     `${GIT_REPOSITORY_FEED_URL}/daily/markdown`,
     `${GIT_REPOSITORY_FEED_URL}/daily/tex`,
-    `${GIT_REPOSITORY_FEED_URL}/daily/typescript`,
     `${GIT_REPOSITORY_FEED_URL}/daily/vue`,
     `${GIT_REPOSITORY_FEED_URL}/daily/php`
   ];

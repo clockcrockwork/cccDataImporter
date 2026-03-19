@@ -3,6 +3,7 @@ import fetch from 'node-fetch';
 const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_BASE_DELAY_MS = 500;
 const RESPONSE_SNIPPET_MAX_LENGTH = 300;
+const MAX_RETRY_AFTER_MS = 30000;
 
 const RETRYABLE_STATUS_CODES = new Set([
   429,
@@ -45,12 +46,43 @@ function createHttpError(meta) {
   );
 }
 
+function parseRetryAfterToMs(value) {
+  if (!value) {
+    return null;
+  }
+
+  const asSeconds = Number(value);
+  if (!Number.isNaN(asSeconds) && asSeconds >= 0) {
+    return Math.round(asSeconds * 1000);
+  }
+
+  const asDate = Date.parse(value);
+  if (!Number.isNaN(asDate)) {
+    return Math.max(0, asDate - Date.now());
+  }
+
+  return null;
+}
+
+function resolveDelayMs({ response, attempt, baseDelayMs }) {
+  if (response?.status === 429) {
+    const retryAfterHeader = response.headers?.get?.('retry-after');
+    const retryAfterMs = parseRetryAfterToMs(retryAfterHeader);
+    if (retryAfterMs !== null) {
+      return Math.min(retryAfterMs, MAX_RETRY_AFTER_MS);
+    }
+  }
+
+  return baseDelayMs * (2 ** attempt);
+}
+
 export async function fetchWithRetry(url, options = {}, config = {}) {
   const {
     jobName = 'unknown-job',
     maxRetries = DEFAULT_MAX_RETRIES,
     baseDelayMs = DEFAULT_BASE_DELAY_MS,
-    fetchImpl = fetch
+    fetchImpl = fetch,
+    sleepImpl = sleep
   } = config;
 
   for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
@@ -67,7 +99,7 @@ export async function fetchWithRetry(url, options = {}, config = {}) {
       }
 
       logFailure({ ...meta, retryAttempt: attempt + 1 });
-      await sleep(baseDelayMs * (2 ** attempt));
+      await sleepImpl(baseDelayMs * (2 ** attempt));
       continue;
     }
 
@@ -92,13 +124,14 @@ export async function fetchWithRetry(url, options = {}, config = {}) {
     }
 
     logFailure({ ...meta, retryAttempt: attempt + 1 });
-    await sleep(baseDelayMs * (2 ** attempt));
+    const delayMs = resolveDelayMs({ response, attempt, baseDelayMs });
+    await sleepImpl(delayMs);
   }
 
   throw new Error(`[${jobName}] Unexpected retry exit for url=${url}`);
 }
 
-export async function postDiscordOrThrow({ webhookUrl, payload, jobName, fetchImpl }) {
+export async function postDiscordOrThrow({ webhookUrl, payload, jobName, fetchImpl, sleepImpl }) {
   await fetchWithRetry(
     webhookUrl,
     {
@@ -106,6 +139,6 @@ export async function postDiscordOrThrow({ webhookUrl, payload, jobName, fetchIm
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     },
-    { jobName, fetchImpl }
+    { jobName, fetchImpl, sleepImpl }
   );
 }
