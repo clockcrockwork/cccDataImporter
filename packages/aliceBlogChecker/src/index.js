@@ -3,8 +3,9 @@ const feedparser = require('feedparser-promised');
 const htmlToText = require('html-to-text');
 const { JSDOM } = require('jsdom');
 const { DateTime } = require('luxon');
-const fs = require('fs');
 const path = require('path');
+const net = require('net');
+const { fetchWithRetry, postDiscordOrThrow } = require('../../common/httpClient.cjs');
 
 if (!process.env.GITHUB_ACTIONS) {
   require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
@@ -17,66 +18,128 @@ const SUPABASE_FEED_TABLE_NAME = process.env.SUPABASE_FEED_TABLE_NAME;
 const SUPABASE_FEED_TYPE_ALICE = process.env.SUPABASE_FEED_TYPE_ALICE;
 
 if (!SUPABASE_URL || !SUPABASE_KEY || !ALICE_DISCORD_WEBHOOK_URL || !SUPABASE_FEED_TABLE_NAME || !SUPABASE_FEED_TYPE_ALICE) {
-  throw new Error("Missing required environment variables.");
+  throw new Error('Missing required environment variables.');
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
 const timezone = 'Asia/Tokyo';
+const DISCORD_MAX_CONTENT_LENGTH = 1900;
+
+function toErrorMessage(error) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  try {
+    return JSON.stringify(error);
+  } catch (_) {
+    return String(error);
+  }
+}
+
+function sanitizeText(text) {
+  if (typeof text !== 'string') {
+    return text;
+  }
+
+  return text
+    .replace(/https?:\/\/[^\s)]+/g, (value) => {
+      try {
+        const parsed = new URL(value);
+        return `[REDACTED URL:${parsed.hostname}]`;
+      } catch (_) {
+        return '[REDACTED URL]';
+      }
+    })
+    .replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]');
+}
+
+function isPrivateOrLocalAddress(hostname) {
+  const normalized = (hostname || '').toLowerCase();
+  if (!normalized) return true;
+  if (normalized === 'localhost' || normalized.endsWith('.local')) return true;
+
+  const ipType = net.isIP(normalized);
+  if (ipType === 4) {
+    if (normalized.startsWith('10.') || normalized.startsWith('127.') || normalized.startsWith('192.168.')) return true;
+    const secondOctet = Number(normalized.split('.')[1]);
+    if (normalized.startsWith('172.') && secondOctet >= 16 && secondOctet <= 31) return true;
+  }
+  if (ipType === 6) {
+    if (normalized === '::1' || normalized.startsWith('fc') || normalized.startsWith('fd')) return true;
+  }
+  return false;
+}
+
+function assertSafeUrl(rawUrl, { httpsOnly = false, label }) {
+  try {
+    const parsed = new URL(rawUrl);
+    const allowedProtocol = httpsOnly ? parsed.protocol === 'https:' : parsed.protocol === 'https:' || parsed.protocol === 'http:';
+    if (!allowedProtocol) {
+      throw new Error(`Unsupported protocol for ${label}`);
+    }
+    if (isPrivateOrLocalAddress(parsed.hostname)) {
+      throw new Error(`Blocked private/local host for ${label}`);
+    }
+    return parsed;
+  } catch (error) {
+    throw new Error(`Unsafe URL for ${label}: ${sanitizeText(rawUrl)} (${toErrorMessage(error)})`);
+  }
+}
+
+function parseFeedDate(dateString) {
+  if (!dateString) {
+    return null;
+  }
+
+  const parsers = [DateTime.fromRFC2822, DateTime.fromISO, DateTime.fromHTTP];
+  for (const parser of parsers) {
+    const parsed = parser(dateString, { zone: timezone });
+    if (parsed.isValid) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
 
 async function handleError(error) {
   const ERROR_WEBHOOK_URL = process.env.ERROR_WEBHOOK_URL;
-  const GH_TOKEN = process.env.GH_TOKEN;
-  const GITHUB_REPO = process.env.GITHUB_REPO;
 
-  // エラーがオブジェクトの場合、messageとstackを取り出す
   if (error instanceof Error) {
     error = {
       message: error.message,
       stack: error.stack
     };
   }
-  // エラーが文字列の場合、オブジェクトに変換する
   if (typeof error === 'string') {
     error = {
       message: error
     };
   }
 
-  // messageとstackが文字列かどうかチェックする
-  if (typeof error.message === 'string') {
-    error.message = error.message.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]');
-  }
-
-  if (typeof error.stack === 'string') {
-    error.stack = error.stack.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]');
-  }
+  error.message = sanitizeText(error.message);
+  error.stack = sanitizeText(error.stack);
 
   console.log('Error:', error.message);
 
-  await fetch(ERROR_WEBHOOK_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content: `【Alice Blog Check】Error: ${error.message}` })
-  });
-  // const sanitizedError = {
-  //     message: error.message.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]'),
-  //     stack: error.stack ? error.stack.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]') : 'No stack trace available'
-  // };
-  // await fetch(
-  //     `https://api.github.com/repos/${GITHUB_REPO}/issues`,
-  //     {
-  //         method: 'POST',
-  //         headers: {
-  //             'Content-Type': 'application/json',
-  //             'Authorization': `token ${GH_TOKEN}`
-  //         },
-  //         body: JSON.stringify({
-  //             title: `ALICE Channel Error: ${sanitizedError.message}`,
-  //             body: sanitizedError.stack,
-  //         })
-  //     }
-  // );
+  if (!ERROR_WEBHOOK_URL) {
+    return;
+  }
+  assertSafeUrl(ERROR_WEBHOOK_URL, { httpsOnly: true, label: 'error webhook' });
+
+  const content = `【Alice Blog Check】Error: ${error.message}`.slice(0, DISCORD_MAX_CONTENT_LENGTH);
+  try {
+    await postDiscordOrThrow({
+      webhookUrl: ERROR_WEBHOOK_URL,
+      payload: { content },
+      jobName: 'aliceBlogChecker:handleError'
+    });
+  } catch (notifyError) {
+    console.error('Failed to send error webhook:', toErrorMessage(notifyError));
+  }
 }
 
 const fetchFeeds = async () => {
@@ -97,50 +160,42 @@ const checkAndUpdateFeeds = async (feeds) => {
   let updatesFound = false;
 
   try {
-    const accessToken = await authenticateUser();
+    await authenticateUser();
     for (const feed of feeds) {
-      const parsedFeed = await feedparser.parse({ uri: feed.url });
-      // 日付文字列の値をログに出力する
-      const pubdateString = parsedFeed[0].pubdate;
-      
-      // 日付文字列を解析して適切なDateTimeオブジェクトを作成する関数
-      const parseDate = (dateString) => {
-        let dateTime;
-        try {
-          dateTime = DateTime.fromRFC2822(dateString).setZone(timezone);
-        } catch (e) {
-          try {
-            dateTime = DateTime.fromISO(dateString).setZone(timezone);
-          } catch (e) {
-            handleError('Invalid date format:' + e.message);
-            return null;
-          }
+      try {
+        assertSafeUrl(feed.url, { httpsOnly: false, label: 'feed url' });
+        const parsedFeed = await feedparser.parse({ uri: feed.url });
+        if (!parsedFeed.length) {
+          throw new Error(`Feed has no entries. url=${feed.url}`);
         }
-        return dateTime;
-      };
-      const latestPubdate = parseDate(pubdateString);
-      if (!latestPubdate) {
-        throw new Error(`Invalid date format: ${pubdateString}`);
-      }
-      const lastRetrieved = feed.last_retrieved ? DateTime.fromISO(feed.last_retrieved).setZone(timezone) : null;
-      if (!lastRetrieved || latestPubdate > lastRetrieved) {
-        const latestPubdateUtc = latestPubdate.setZone('UTC').toISO();
-        const { data, error } = await supabase
-          .from(SUPABASE_FEED_TABLE_NAME)
-          .upsert({
-            id: feed.id,
-            feed_type: feed.feed_type,
-            name: feed.name,
-            url: feed.url,
-            webhook: feed.webhook,
-            hook_type: feed.hook_type,
-            notes: feed.notes,
-            last_retrieved: latestPubdateUtc
-          }, { onConflict: 'id' });
 
-        if (error) throw error;
-        updatesFound = true;
-        await postToDiscord(feed, parsedFeed, lastRetrieved);
+        const latestPubdate = parseFeedDate(parsedFeed[0].pubdate);
+        if (!latestPubdate) {
+          throw new Error(`Invalid date format: ${parsedFeed[0].pubdate}. url=${feed.url}`);
+        }
+
+        const lastRetrieved = feed.last_retrieved ? DateTime.fromISO(feed.last_retrieved).setZone(timezone) : null;
+        if (!lastRetrieved || latestPubdate > lastRetrieved) {
+          const latestPubdateUtc = latestPubdate.setZone('UTC').toISO();
+          const { error } = await supabase
+            .from(SUPABASE_FEED_TABLE_NAME)
+            .upsert({
+              id: feed.id,
+              feed_type: feed.feed_type,
+              name: feed.name,
+              url: feed.url,
+              webhook: feed.webhook,
+              hook_type: feed.hook_type,
+              notes: feed.notes,
+              last_retrieved: latestPubdateUtc
+            }, { onConflict: 'id' });
+
+          if (error) throw error;
+          updatesFound = true;
+          await postToDiscord(feed, parsedFeed, lastRetrieved);
+        }
+      } catch (error) {
+        await handleError(`Feed processing failed for url=${feed.url}: ${toErrorMessage(error)}`);
       }
     }
 
@@ -153,11 +208,12 @@ const checkAndUpdateFeeds = async (feeds) => {
 };
 
 const convertHtmlToMarkdown = (htmlContent) => {
-  return htmlToText.fromString(htmlContent, {
+  return htmlToText.convert(htmlContent || '', {
     wordwrap: 130,
     linkHrefBaseUrl: ''
   });
 };
+
 const authenticateUser = async () => {
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -171,36 +227,44 @@ const authenticateUser = async () => {
     throw error;
   }
 };
+
 const postToDiscord = async (feed, entries, lastRetrieved = null) => {
-  entries.reverse();
-  
-  for (const entry of entries) {
-    const pubdate = DateTime.fromRFC2822(entry.pubdate).setZone(timezone);
-    
+  if (!feed.webhook) {
+    await handleError(`Missing webhook for feed url=${feed.url}`);
+    return;
+  }
+  assertSafeUrl(feed.webhook, { httpsOnly: true, label: `feed webhook url=${feed.url}` });
+
+  const orderedEntries = [...entries].reverse();
+
+  for (const entry of orderedEntries) {
+    const pubdate = parseFeedDate(entry.pubdate);
+    if (!pubdate) {
+      await handleError(`Skip entry with invalid date. url=${feed.url}`);
+      continue;
+    }
+
     if (lastRetrieved && pubdate <= lastRetrieved) continue;
 
-    const value = entry.description;
-    const dom = new JSDOM(value);
+    const description = entry.description || '';
+    const dom = new JSDOM(description);
     const imageElement = dom.window.document.querySelector('img');
     const imageUrl = imageElement ? imageElement.src : null;
 
     const embed = {
       title: entry.title,
-      description: convertHtmlToMarkdown(entry.description),
+      description: convertHtmlToMarkdown(description),
       url: entry.link,
       footer: { text: feed.name },
       image: { url: imageUrl }
     };
-    try {
-      const response = await fetch(feed.webhook, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ embeds: [embed] })
-      });
 
-      if (!response.ok) {
-        throw new Error(`Failed to send message: ${response.status}`);
-      }
+    try {
+      await postDiscordOrThrow({
+        webhookUrl: feed.webhook,
+        payload: { embeds: [embed] },
+        jobName: 'aliceBlogChecker:postToDiscord'
+      });
     } catch (error) {
       await handleError(error);
     }
@@ -210,7 +274,7 @@ const postToDiscord = async (feed, entries, lastRetrieved = null) => {
 const postRandomImageToDiscord = async (webhook) => {
   const PIXABAY_API_KEY = process.env.PIXABAY_API_KEY;
   const FLICKR_API_KEY = process.env.FLICKR_API_KEY;
-  
+
   const sources = [
     {
       url: (keyword) => {
@@ -240,14 +304,15 @@ const postRandomImageToDiscord = async (webhook) => {
     }
   ];
 
-  // どちらを使うかランダムに選択
   const source = sources[Math.floor(Math.random() * sources.length)];
 
   try {
-    const response = await fetch(source.url('alice in wonderland'));
-    if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${response.statusText}`);
-    }
+    assertSafeUrl(webhook, { httpsOnly: true, label: 'main webhook' });
+    const response = await fetchWithRetry(
+      source.url('alice in wonderland'),
+      {},
+      { jobName: 'aliceBlogChecker:postRandomImageToDiscord' }
+    );
     const data = await response.json();
     const imageUrl = source.parseResponse(data);
     const embed = {
@@ -255,21 +320,29 @@ const postRandomImageToDiscord = async (webhook) => {
       footer: { text: source.footer }
     };
 
-    const discordResponse = await fetch(webhook, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ embeds: [embed] })
+    await postDiscordOrThrow({
+      webhookUrl: webhook,
+      payload: { embeds: [embed] },
+      jobName: 'aliceBlogChecker:postRandomImageToDiscord'
     });
-
-    if (!discordResponse.ok) {
-      throw new Error(`Failed to send message: ${discordResponse.status}`);
-    }
   } catch (error) {
-    handleError(error);
+    await handleError(error);
   }
 };
 
-(async () => {
-  const feeds = await fetchFeeds();
-  await checkAndUpdateFeeds(feeds);
-})();
+module.exports = {
+  parseFeedDate,
+  handleError,
+  fetchFeeds,
+  checkAndUpdateFeeds,
+  authenticateUser,
+  postToDiscord,
+  postRandomImageToDiscord
+};
+
+if (require.main === module) {
+  (async () => {
+    const feeds = await fetchFeeds();
+    await checkAndUpdateFeeds(feeds);
+  })();
+}
