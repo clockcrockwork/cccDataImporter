@@ -18,6 +18,9 @@ const SUPABASE_DAILY_TABLE_NAME = process.env.SUPABASE_DAILY_TABLE_NAME;
 const ERROR_WEBHOOK_URL = process.env.ERROR_WEBHOOK_URL;
 const GIT_REPOSITORY_FEED_URL = process.env.GIT_REPOSITORY_FEED_URL;
 const DISCORD_DAILY_WEBHOOK_URL = process.env.DISCORD_DAILY_WEBHOOK_URL;
+const MIN_SUCCESS_CATEGORIES = 5;
+const DISCORD_ERROR_MESSAGE_MAX_LENGTH = 1500;
+const DISCORD_EMBED_TEXT_MAX_LENGTH = 4000;
 
 if (!SUPABASE_URL || !SUPABASE_KEY || !SUPABASE_DAILY_TABLE_NAME || !ERROR_WEBHOOK_URL || !GIT_REPOSITORY_FEED_URL || !DISCORD_DAILY_WEBHOOK_URL) {
   throw new Error('Missing required environment variables.');
@@ -34,6 +37,56 @@ function createErrorArray() {
   };
 }
 
+function isNonEmptyString(value) {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function buildDiscordWebhookUrl(baseUrl, forumId) {
+  const trimmedForumId = String(forumId).trim();
+
+  if (!/^\d+$/.test(trimmedForumId)) {
+    throw new Error('BusinessError: invalid Discord thread id');
+  }
+
+  const webhookUrl = new URL(baseUrl);
+  webhookUrl.searchParams.set('thread_id', trimmedForumId);
+  return webhookUrl.toString();
+}
+
+function toDiscordErrorMessage(errors) {
+  const merged = errors
+    .map((err) => (isNonEmptyString(err?.message) ? err.message : 'Unknown error'))
+    .join('\n');
+
+  return sanitizeDiscordText(merged).slice(0, DISCORD_ERROR_MESSAGE_MAX_LENGTH);
+}
+
+
+function sanitizeDiscordText(value) {
+  return String(value)
+    .replaceAll('@', '@\u200b')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, DISCORD_EMBED_TEXT_MAX_LENGTH);
+}
+
+function isValidPost(post) {
+  return isNonEmptyString(post?.title)
+    && isNonEmptyString(post?.url)
+    && isNonEmptyString(post?.content_html);
+}
+
+function normalizePosts(posts) {
+  return posts
+    .filter((post) => isValidPost(post))
+    .map((post) => ({
+      ...post,
+      title: sanitizeDiscordText(post.title),
+      url: String(post.url).trim(),
+      content_html: String(post.content_html)
+    }));
+}
+
 async function getDiscordThreadId() {
   const { data, error } = await supabase
     .from(SUPABASE_DAILY_TABLE_NAME)
@@ -43,10 +96,16 @@ async function getDiscordThreadId() {
     throw error;
   }
 
-  return data[0].forum_id;
+  const forumId = data?.[0]?.forum_id;
+
+  if (!isNonEmptyString(forumId)) {
+    throw new Error('BusinessError: missing Discord thread id');
+  }
+
+  return forumId;
 }
 
-async function fetchGitHubTrends() {
+export async function fetchGitHubTrends({ fetchWithRetryImpl = fetchWithRetry, logImpl = console.log } = {}) {
   const languages = [
     'javascript',
     'css',
@@ -72,19 +131,31 @@ async function fetchGitHubTrends() {
     'php'
   ];
 
-  const urls = [...new Set(languages)].map((language) => `${GIT_REPOSITORY_FEED_URL}/daily/${language}`);
+  const urls = [...new Set(languages)].map((language) => `${GIT_REPOSITORY_FEED_URL}/daily/${language}/en?format=json`);
 
   const responses = await Promise.allSettled(
     urls.map(async (url) => {
-      const setURL = `${url}/en?format=json`;
-      const response = await fetchWithRetry(setURL, {}, { jobName: 'getPopularRepositories:fetchGitHubTrends' });
-      return response.json();
+      const response = await fetchWithRetryImpl(url, {}, { jobName: 'getPopularRepositories:fetchGitHubTrends' });
+      const data = await response.json();
+      if (!Array.isArray(data?.items)) {
+        throw new Error('BusinessError: invalid feed payload');
+      }
+
+      return data.items;
     })
   );
 
+  const successCount = responses.filter((response) => response.status === 'fulfilled').length;
+  const failureCount = responses.length - successCount;
+  logImpl(`[getPopularRepositories] successCount=${successCount}, failureCount=${failureCount}`);
+
+  if (successCount < MIN_SUCCESS_CATEGORIES) {
+    throw new Error(`BusinessError: insufficient successful categories (${successCount}/${responses.length})`);
+  }
+
   return responses
     .filter((response) => response.status === 'fulfilled')
-    .flatMap((response) => response.value.items || []);
+    .flatMap((response) => response.value);
 }
 
 function extractImages(contentHtml) {
@@ -94,25 +165,26 @@ function extractImages(contentHtml) {
 
 function formatDiscordMessages(posts) {
   return posts.slice(0, 10).map((post, index) => {
-    const section = post.content_html.split('<br>')[0];
-    const description = section.startsWith('<img') ? decode(post.content_html.split('<br>')[1]) : decode(section);
+    const section = post.content_html.split('<br>')[0] || '';
+    const secondarySection = post.content_html.split('<br>')[1] || '';
+    const description = section.startsWith('<img') ? decode(secondarySection) : decode(section);
     const images = extractImages(post.content_html);
 
     return [{
       title: `${index + 1}. ${post.title}`,
-      description,
+      description: sanitizeDiscordText(description),
       url: post.url,
       image: { url: images[0] }
     }];
   });
 }
 
-async function sendToDiscord(embeds) {
-  const forumId = await getDiscordThreadId();
-  const webhookUrl = `${DISCORD_DAILY_WEBHOOK_URL}?thread_id=${forumId}`;
+export async function sendToDiscord(embeds, { getDiscordThreadIdImpl = getDiscordThreadId, postDiscordOrThrowImpl = postDiscordOrThrow } = {}) {
+  const forumId = await getDiscordThreadIdImpl();
+  const webhookUrl = buildDiscordWebhookUrl(DISCORD_DAILY_WEBHOOK_URL, forumId);
 
   for (const embedSet of embeds) {
-    await postDiscordOrThrow({
+    await postDiscordOrThrowImpl({
       webhookUrl,
       payload: { embeds: embedSet },
       jobName: 'getPopularRepositories:postDiscordOrThrow'
@@ -125,7 +197,7 @@ async function handleError(errors) {
     return;
   }
 
-  const errorMessage = errors.map((err) => err.message).join('\n');
+  const errorMessage = toDiscordErrorMessage(errors);
   console.log(errorMessage);
   await postDiscordOrThrow({
     webhookUrl: ERROR_WEBHOOK_URL,
@@ -134,18 +206,26 @@ async function handleError(errors) {
   });
 }
 
-async function main() {
+export async function main({ fetchGitHubTrendsImpl = fetchGitHubTrends, sendToDiscordImpl = sendToDiscord, handleErrorImpl = handleError } = {}) {
   const errors = createErrorArray();
 
   try {
-    const posts = await fetchGitHubTrends();
-    const discordMessages = formatDiscordMessages(posts);
-    await sendToDiscord(discordMessages);
+    const posts = await fetchGitHubTrendsImpl();
+    const normalizedPosts = normalizePosts(posts);
+
+    if (normalizedPosts.length === 0) {
+      throw new Error('BusinessError: no valid posts after category aggregation');
+    }
+
+    const discordMessages = formatDiscordMessages(normalizedPosts);
+    await sendToDiscordImpl(discordMessages);
   } catch (error) {
     errors.addError(error);
   } finally {
-    await handleError(errors.getErrors());
+    await handleErrorImpl(errors.getErrors());
   }
 }
 
-main();
+if (process.env.NODE_ENV !== 'test') {
+  main();
+}
