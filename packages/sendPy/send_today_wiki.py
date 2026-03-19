@@ -1,61 +1,46 @@
-import wikipedia
-import requests
 import datetime
 import os
 import random
+import wikipedia
+
+from discord_http_client import post_discord_or_throw
+from wiki_page_resolver import resolve_page_with_disambiguation, SELECTION_FIRST
 
 # Discord Webhook URLs
 WIKI_DISCORD_WEBHOOK_URL = os.getenv('WIKI_DISCORD_WEBHOOK_URL')
 ERROR_WEBHOOK_URL = os.getenv('ERROR_WEBHOOK_URL')
 
+
 def send_error_to_discord(error_message: str):
     error_data = {
-        "content": f"【WIKI Channel】Error occurred: {error_message}"
+        "content": f"【WIKI Channel】Error occurred: {error_message[:1900]}"
     }
-    headers = {"Content-Type": "application/json"}
-    response = requests.post(ERROR_WEBHOOK_URL, json=error_data, headers=headers)
-    if response.status_code != 204:
-        print(f"Failed to send error message: {response.status_code}, {response.text}")
+    post_discord_or_throw(ERROR_WEBHOOK_URL, error_data)
 
-try:
-    # 日本語WikipediaのURLを設定
+
+def main():
     wikipedia.set_lang("ja")
 
-    # 当日の日付を取得
     today = datetime.datetime.now()
     month = today.strftime("%m")
     day = (today + datetime.timedelta(days=1)).strftime("%d")
 
-    # Wikipediaの「今日は何の日？」ページを取得
     page_title = f"{month}月{day}日"
-    page = wikipedia.page(page_title)
+    page = resolve_page_with_disambiguation(page_title, selection_rule=SELECTION_FIRST)
 
-    # 記事のセクションを取得
-    content = page.content
+    sections = [section for section in page.content.split("\n\n") if section.strip()]
+    if not sections:
+        raise RuntimeError(f"No sections found in page content: {page_title}")
 
-    # いくつかの分割方法がありますが、例として "\n\n" を使用
-    sections = content.split("\n\n")
-
-    # ランダムに記事を選択
     random_section = random.choice(sections)
+    content_snippet = random_section[:500]
+    image_url = page.images[0] if page.images else None
 
-    # 記事のタイトルと内容を取得
-    title = page_title
-    content_snippet = random_section[:500]  # 内容の一部を取得（長すぎる場合があるため）
-
-    # 記事のURLを取得
-    article_url = page.url
-
-    # 記事内の画像を取得
-    images = page.images
-    image_url = images[0] if images else None
-
-    # Embedメッセージの作成
     embed = {
-        "title": f"今日は何の日？: {title}",
+        "title": f"今日は何の日？: {page_title}",
         "description": content_snippet,
-        "url": article_url,
-        "color": 3447003,  # Blue
+        "url": page.url,
+        "color": 3447003,
         "timestamp": today.isoformat(),
         "footer": {
             "text": "Powered by Wikipedia"
@@ -65,20 +50,16 @@ try:
     if image_url:
         embed["thumbnail"] = {"url": image_url}
 
-    # Webhookデータの作成
-    data = {
-        "embeds": [embed]
-    }
+    data = {"embeds": [embed]}
+    post_discord_or_throw(WIKI_DISCORD_WEBHOOK_URL, data)
+    print("Successfully sent message to Discord.")
 
-    # Webhookに送信
-    headers = {"Content-Type": "application/json"}
-    response = requests.post(WIKI_DISCORD_WEBHOOK_URL, json=data, headers=headers)
 
-    if response.status_code == 204:
-        print("Successfully sent message to Discord.")
-    else:
-        raise Exception(f"Failed to send message: {response.status_code}, {response.text}")
-
-except Exception as error:
-    # エラー内容をエラーメッセージ用のDiscord Webhookに送信
-    send_error_to_discord(str(error))
+if __name__ == '__main__':
+    try:
+        main()
+    except Exception as error:
+        try:
+            send_error_to_discord(str(error))
+        except Exception as notify_error:
+            print(f"Failed to notify error webhook: {notify_error}")
