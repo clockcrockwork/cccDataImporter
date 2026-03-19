@@ -97,7 +97,7 @@ test('fetchWithRetry does not retry on 4xx and throws with details', async () =>
     sleepImpl,
     maxRetries: 3,
     baseDelayMs: 10
-  })).rejects.toThrow('status=400, responseSnippet=bad request details');
+  })).rejects.toThrow('method=GET, url=https://example.com, status=400, responseSnippet=bad request details');
 
   expect(callCount).toBe(1);
   expect(sleepImpl).not.toHaveBeenCalled();
@@ -130,6 +130,27 @@ test('fetchWithRetry uses Retry-After header when status is 429', async () => {
 
   expect(response.status).toBe(200);
   expect(delays).toEqual([2000]);
+});
+
+test('fetchWithRetry falls back to exponential backoff when Retry-After is invalid', async () => {
+  const delays = [];
+  const sleepImpl = jest.fn(async (ms) => {
+    delays.push(ms);
+  });
+
+  const fetchImpl = jest.fn()
+    .mockResolvedValueOnce(createResponse({ ok: false, status: 429, body: 'rate limited', retryAfter: 'abc' }))
+    .mockResolvedValueOnce(createResponse({ ok: true, status: 200 }));
+
+  await fetchWithRetry('https://example.com', {}, {
+    jobName: 'test:retryAfterFallback',
+    fetchImpl,
+    sleepImpl,
+    maxRetries: 2,
+    baseDelayMs: 50
+  });
+
+  expect(delays).toEqual([50]);
 });
 
 test('fetchWithRetry caps Retry-After delay to upper bound', async () => {

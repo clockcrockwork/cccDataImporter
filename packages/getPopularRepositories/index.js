@@ -47,30 +47,32 @@ async function getDiscordThreadId() {
 }
 
 async function fetchGitHubTrends() {
-  const urls = [
-    `${GIT_REPOSITORY_FEED_URL}/daily/javascript`,
-    `${GIT_REPOSITORY_FEED_URL}/daily/css`,
-    `${GIT_REPOSITORY_FEED_URL}/daily/astro`,
-    `${GIT_REPOSITORY_FEED_URL}/daily/dart`,
-    `${GIT_REPOSITORY_FEED_URL}/daily/dockerfile`,
-    `${GIT_REPOSITORY_FEED_URL}/daily/haskell`,
-    `${GIT_REPOSITORY_FEED_URL}/daily/json`,
-    `${GIT_REPOSITORY_FEED_URL}/daily/typescript`,
-    `${GIT_REPOSITORY_FEED_URL}/daily/kotlin`,
-    `${GIT_REPOSITORY_FEED_URL}/daily/html`,
-    `${GIT_REPOSITORY_FEED_URL}/daily/python`,
-    `${GIT_REPOSITORY_FEED_URL}/daily/rich-text-format`,
-    `${GIT_REPOSITORY_FEED_URL}/daily/rust`,
-    `${GIT_REPOSITORY_FEED_URL}/daily/scala`,
-    `${GIT_REPOSITORY_FEED_URL}/daily/scheme`,
-    `${GIT_REPOSITORY_FEED_URL}/daily/smarty`,
-    `${GIT_REPOSITORY_FEED_URL}/daily/svg`,
-    `${GIT_REPOSITORY_FEED_URL}/daily/swift`,
-    `${GIT_REPOSITORY_FEED_URL}/daily/markdown`,
-    `${GIT_REPOSITORY_FEED_URL}/daily/tex`,
-    `${GIT_REPOSITORY_FEED_URL}/daily/vue`,
-    `${GIT_REPOSITORY_FEED_URL}/daily/php`
+  const languages = [
+    'javascript',
+    'css',
+    'astro',
+    'dart',
+    'dockerfile',
+    'haskell',
+    'json',
+    'typescript',
+    'kotlin',
+    'html',
+    'python',
+    'rich-text-format',
+    'rust',
+    'scala',
+    'scheme',
+    'smarty',
+    'svg',
+    'swift',
+    'markdown',
+    'tex',
+    'vue',
+    'php'
   ];
+
+  const urls = [...new Set(languages)].map((language) => `${GIT_REPOSITORY_FEED_URL}/daily/${language}`);
 
   const responses = await Promise.allSettled(
     urls.map(async (url) => {
