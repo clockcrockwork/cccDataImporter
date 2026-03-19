@@ -1,10 +1,10 @@
-import fetch from 'node-fetch';
+import { postDiscordOrThrow } from '../common/httpClient.js';
 
 export async function postToDiscord(webhookUrl, content) {
-  await fetch(webhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(content)
+  await postDiscordOrThrow({
+    webhookUrl,
+    payload: content,
+    jobName: 'notifyDiscord:postToDiscord'
   });
 }
 
