@@ -23,7 +23,7 @@ def main():
 
     today = datetime.datetime.now()
     month = today.strftime("%m")
-    day = (today + datetime.timedelta(days=1)).strftime("%d")
+    day = today.strftime("%d")
 
     page_title = f"{month}月{day}日"
     page = resolve_page_with_disambiguation(page_title, selection_rule=SELECTION_FIRST)

@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { fetchWithRetry, postDiscordOrThrow } from '../common/httpClient.js';
+import { handleError, createErrorArray } from '../common/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,15 +28,6 @@ if (!SUPABASE_URL || !SUPABASE_KEY || !SUPABASE_DAILY_TABLE_NAME || !ERROR_WEBHO
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-function createErrorArray() {
-  let errorArray = [];
-
-  return {
-    addError: (error) => errorArray.push(error),
-    getErrors: () => errorArray
-  };
-}
-
 async function getDiscordThreadId() {
   const { data, error } = await supabase
     .from(SUPABASE_DAILY_TABLE_NAME)
@@ -45,6 +37,9 @@ async function getDiscordThreadId() {
     throw error;
   }
 
+  if (!data || data.length === 0) {
+    throw new Error('No forum_id found in daily table.');
+  }
   return data[0].forum_id;
 }
 
@@ -77,7 +72,7 @@ async function fetchWorkFlowData() {
 }
 
 async function sendToDiscord(comment, forumId) {
-  const webhookUrl = `${DISCORD_DAILY_WEBHOOK_URL}?thread_id=${forumId}`;
+  const webhookUrl = `${DISCORD_DAILY_WEBHOOK_URL}?thread_id=${encodeURIComponent(forumId)}`;
   const payload = {
     embeds: [
       {
@@ -97,18 +92,6 @@ async function sendToDiscord(comment, forumId) {
   });
 }
 
-async function handleError(errors) {
-  if (errors.length === 0) {
-    return;
-  }
-
-  const errorMessage = errors.map((err) => err.message).join('\n');
-  await postDiscordOrThrow({
-    webhookUrl: ERROR_WEBHOOK_URL,
-    payload: { content: `【Daily Today Wikipedia】Errors occurred: ${errorMessage}` },
-    jobName: 'getWhatsToday:errorWebhook'
-  });
-}
 
 async function main() {
   const errors = createErrorArray();
@@ -119,7 +102,12 @@ async function main() {
   } catch (error) {
     errors.addError(error);
   } finally {
-    await handleError(errors.getErrors());
+    await handleError({
+      errors: errors.getErrors(),
+      label: 'Daily Today Wikipedia',
+      webhookUrl: ERROR_WEBHOOK_URL,
+      jobName: 'getWhatsToday:errorWebhook'
+    });
   }
 }
 
