@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import sharp from 'sharp';
 import { decode } from 'html-entities';
 import fetch from 'node-fetch';
-import { createErrorArray } from '../../common/errorUtils.js';
+import { handleError, createErrorArray } from '../../common/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -133,7 +133,7 @@ async function processImage(imageUrl, imageName) {
             console.error('The URL does not point to a valid image');
             throw new Error('The URL does not point to a valid image');
         }
-        const imageBuffer = await response.buffer();
+        const imageBuffer = Buffer.from(await response.arrayBuffer());
         const processedImageBuffer = await sharp(imageBuffer)
             .resize(400)
             .png({ quality: 60, compressionLevel: 9 })
@@ -170,7 +170,8 @@ async function processFeeds(feeds, concurrencyLimit = 5) {
     results.push(...batchResults.filter(result => result.status === 'fulfilled').map(result => result.value));
   }
 
-  return { results, errors };
+  return { results, errors: errors.getErrors() };
+
 }
 
 async function processFeed(feed, errors) {
@@ -217,16 +218,6 @@ async function processFeed(feed, errors) {
 }
 
 
-async function handleError(errors) {
-    if (errors.length > 0) {
-        const errorMessage = errors.map(err => err.message).join('\n');
-        await fetch(ERROR_WEBHOOK_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: `【fetch RSS】Errors occurred: ${errorMessage}` })
-        });
-    }
-}
 const authenticateUser = async () => {
     try {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -248,7 +239,7 @@ async function main() {
         await authenticateUser();
         const feeds = await getRssFeeds();
         const { results, errors: feedErrors } = await processFeeds(feeds);
-        feedErrors.getErrors().forEach(e => errors.addError(e));
+        feedErrors.forEach(err => errors.addError(err));
 
         const updates = results.flatMap(result => result.updates);
         const notifications = results.flatMap(result => result.notifications).reverse();
@@ -271,6 +262,7 @@ async function main() {
                     return { ...fullFeedData, 'last_retrieved': currentDateTime };
                 } else {
                     console.error('Full feed data not found for update id:', update.id);
+                    return null;
                 }
             }).filter(Boolean);
 
@@ -296,7 +288,12 @@ async function main() {
         errors.addError(error);
     }
     finally {
-        await handleError(errors.getErrors());
+        await handleError({
+            errors: errors.getErrors(),
+            label: 'fetch RSS',
+            webhookUrl: ERROR_WEBHOOK_URL,
+            jobName: 'fetchRss:errorWebhook'
+        });
     }
 }
 
