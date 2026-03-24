@@ -26,10 +26,19 @@ function getResponseSnippet(text) {
   return (text || '').replace(/\s+/g, ' ').trim().slice(0, RESPONSE_SNIPPET_MAX_LENGTH);
 }
 
+function sanitizeUrl(rawUrl) {
+  try {
+    const parsed = new URL(rawUrl);
+    return `${parsed.origin}${parsed.pathname}`;
+  } catch {
+    return '[invalid-url]';
+  }
+}
+
 function buildFailureMeta({ jobName, url, method, status, responseSnippet, error }) {
   return {
     jobName,
-    url,
+    url: sanitizeUrl(url),
     method,
     status: status ?? 'N/A',
     responseSnippet: responseSnippet || 'N/A',
@@ -148,7 +157,7 @@ export async function fetchWithRetry(url, options = {}, config = {}) {
     await sleepImpl(delayMs);
   }
 
-  throw new Error(`[${jobName}] Unexpected retry exit for url=${url}`);
+  throw new Error(`[${jobName}] Unexpected retry exit for url=${sanitizeUrl(url)}`);
 }
 
 const ALLOWED_DISCORD_HOSTS = ['discord.com', 'discordapp.com'];
