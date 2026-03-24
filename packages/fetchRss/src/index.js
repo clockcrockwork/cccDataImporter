@@ -9,6 +9,7 @@ import { decode } from 'html-entities';
 import fetch from 'node-fetch';
 import { pipeline } from 'stream';
 import { promisify } from 'util';
+import { handleError } from '../../common/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -228,16 +229,6 @@ async function processFeed(feed, errors) {
 }
 
 
-async function handleError(errors) {
-    if (errors.length > 0) {
-        const errorMessage = errors.map(err => err.message).join('\n');
-        await fetch(ERROR_WEBHOOK_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: `【fetch RSS】Errors occurred: ${errorMessage}` })
-        });
-    }
-}
 const authenticateUser = async () => {
     try {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -308,7 +299,12 @@ async function main() {
         errors.addError(error);
     }
     finally {
-        await handleError(errors.getErrors());
+        await handleError({
+            errors: errors.getErrors(),
+            label: 'fetch RSS',
+            webhookUrl: ERROR_WEBHOOK_URL,
+            jobName: 'fetchRss:errorWebhook'
+        });
     }
 }
 

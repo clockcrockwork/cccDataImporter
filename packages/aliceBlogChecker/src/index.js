@@ -6,6 +6,7 @@ const { DateTime } = require('luxon');
 const path = require('path');
 const net = require('net');
 const { fetchWithRetry, postDiscordOrThrow } = require('../../common/httpClient.cjs');
+const { handleError, toErrorMessage, sanitizeText } = require('../../common/errorHandler.cjs');
 
 if (!process.env.GITHUB_ACTIONS) {
   require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
@@ -23,38 +24,6 @@ if (!SUPABASE_URL || !SUPABASE_KEY || !ALICE_DISCORD_WEBHOOK_URL || !SUPABASE_FE
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const timezone = 'Asia/Tokyo';
-const DISCORD_MAX_CONTENT_LENGTH = 1900;
-
-function toErrorMessage(error) {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  if (typeof error === 'string') {
-    return error;
-  }
-  try {
-    return JSON.stringify(error);
-  } catch (_) {
-    return String(error);
-  }
-}
-
-function sanitizeText(text) {
-  if (typeof text !== 'string') {
-    return text;
-  }
-
-  return text
-    .replace(/https?:\/\/[^\s)]+/g, (value) => {
-      try {
-        const parsed = new URL(value);
-        return `[REDACTED URL:${parsed.hostname}]`;
-      } catch (_) {
-        return '[REDACTED URL]';
-      }
-    })
-    .replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]');
-}
 
 function isPrivateOrLocalAddress(hostname) {
   const normalized = (hostname || '').toLowerCase();
@@ -105,42 +74,12 @@ function parseFeedDate(dateString) {
   return null;
 }
 
-async function handleError(error) {
-  const ERROR_WEBHOOK_URL = process.env.ERROR_WEBHOOK_URL;
-
-  if (error instanceof Error) {
-    error = {
-      message: error.message,
-      stack: error.stack
-    };
-  }
-  if (typeof error === 'string') {
-    error = {
-      message: error
-    };
-  }
-
-  error.message = sanitizeText(error.message);
-  error.stack = sanitizeText(error.stack);
-
-  console.log('Error:', error.message);
-
-  if (!ERROR_WEBHOOK_URL) {
-    return;
-  }
-  assertSafeUrl(ERROR_WEBHOOK_URL, { httpsOnly: true, label: 'error webhook' });
-
-  const content = `【Alice Blog Check】Error: ${error.message}`.slice(0, DISCORD_MAX_CONTENT_LENGTH);
-  try {
-    await postDiscordOrThrow({
-      webhookUrl: ERROR_WEBHOOK_URL,
-      payload: { content },
-      jobName: 'aliceBlogChecker:handleError'
-    });
-  } catch (notifyError) {
-    console.error('Failed to send error webhook:', toErrorMessage(notifyError));
-  }
-}
+const aliceHandleError = (error) => handleError({
+  errors: error,
+  label: 'Alice Blog Check',
+  webhookUrl: process.env.ERROR_WEBHOOK_URL,
+  jobName: 'aliceBlogChecker:handleError'
+});
 
 const fetchFeeds = async () => {
   try {
@@ -151,7 +90,7 @@ const fetchFeeds = async () => {
     if (error) throw error;
     return data;
   } catch (error) {
-    await handleError(error);
+    await aliceHandleError(error);
     return [];
   }
 };
@@ -195,7 +134,7 @@ const checkAndUpdateFeeds = async (feeds) => {
           await postToDiscord(feed, parsedFeed, lastRetrieved);
         }
       } catch (error) {
-        await handleError(`Feed processing failed for url=${feed.url}: ${toErrorMessage(error)}`);
+        await aliceHandleError(`Feed processing failed for url=${feed.url}: ${toErrorMessage(error)}`);
       }
     }
 
@@ -203,7 +142,7 @@ const checkAndUpdateFeeds = async (feeds) => {
       await postRandomImageToDiscord(ALICE_DISCORD_WEBHOOK_URL);
     }
   } catch (error) {
-    await handleError(error);
+    await aliceHandleError(error);
   }
 };
 
@@ -223,14 +162,14 @@ const authenticateUser = async () => {
     if (error) throw error;
     return data.session.access_token;
   } catch (error) {
-    await handleError(`Error authenticating user: ${error.message}`);
+    await aliceHandleError(`Error authenticating user: ${error.message}`);
     throw error;
   }
 };
 
 const postToDiscord = async (feed, entries, lastRetrieved = null) => {
   if (!feed.webhook) {
-    await handleError(`Missing webhook for feed url=${feed.url}`);
+    await aliceHandleError(`Missing webhook for feed url=${feed.url}`);
     return;
   }
   assertSafeUrl(feed.webhook, { httpsOnly: true, label: `feed webhook url=${feed.url}` });
@@ -240,7 +179,7 @@ const postToDiscord = async (feed, entries, lastRetrieved = null) => {
   for (const entry of orderedEntries) {
     const pubdate = parseFeedDate(entry.pubdate);
     if (!pubdate) {
-      await handleError(`Skip entry with invalid date. url=${feed.url}`);
+      await aliceHandleError(`Skip entry with invalid date. url=${feed.url}`);
       continue;
     }
 
@@ -266,7 +205,7 @@ const postToDiscord = async (feed, entries, lastRetrieved = null) => {
         jobName: 'aliceBlogChecker:postToDiscord'
       });
     } catch (error) {
-      await handleError(error);
+      await aliceHandleError(error);
     }
   }
 };
@@ -326,13 +265,13 @@ const postRandomImageToDiscord = async (webhook) => {
       jobName: 'aliceBlogChecker:postRandomImageToDiscord'
     });
   } catch (error) {
-    await handleError(error);
+    await aliceHandleError(error);
   }
 };
 
 module.exports = {
   parseFeedDate,
-  handleError,
+  handleError: aliceHandleError,
   fetchFeeds,
   checkAndUpdateFeeds,
   authenticateUser,

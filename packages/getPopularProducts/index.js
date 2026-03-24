@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { decode } from 'html-entities';
 import { fetchWithRetry, postDiscordOrThrow } from '../common/httpClient.js';
+import { handleError } from '../common/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -95,18 +96,6 @@ async function sendToDiscord(embeds) {
   }
 }
 
-async function handleError(errors) {
-  if (errors.length === 0) {
-    return;
-  }
-
-  const errorMessage = errors.map((err) => err.message).join('\n');
-  await postDiscordOrThrow({
-    webhookUrl: ERROR_WEBHOOK_URL,
-    payload: { content: `【Daily ProductHunt Top 10】Errors occurred: ${errorMessage}` },
-    jobName: 'getPopularProducts:errorWebhook'
-  });
-}
 
 async function main() {
   const errors = createErrorArray();
@@ -118,7 +107,12 @@ async function main() {
   } catch (error) {
     errors.addError(error);
   } finally {
-    await handleError(errors.getErrors());
+    await handleError({
+      errors: errors.getErrors(),
+      label: 'Daily ProductHunt Top 10',
+      webhookUrl: ERROR_WEBHOOK_URL,
+      jobName: 'getPopularProducts:errorWebhook'
+    });
   }
 }
 
