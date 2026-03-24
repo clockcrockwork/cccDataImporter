@@ -22,7 +22,7 @@ api_options = [
 
 def send_error_to_discord(error_message: str):
     error_data = {
-        "content": f"【Cat Channel】Error occurred: {error_message}"
+        "content": f"【Beautiful View Channel】Error occurred: {error_message}"
     }
     headers = {"Content-Type": "application/json"}
     response = requests.post(ERROR_WEBHOOK_URL, json=error_data, headers=headers)
@@ -63,27 +63,25 @@ def get_image_url(api_option):
         return None, str(error)
 
 def fetch_image_and_send_to_discord(api_options):
-    if not api_options:
-        send_error_to_discord("No API options available to fetch images.")
-        return
-
-    source = random.choice(api_options)
-    print(f"Fetching image from {source['name']}...")
-    image_url, footer_or_error = get_image_url(source)
-    if image_url:
-        embed = {
-            "image": {"url": image_url},
-            "footer": {"text": footer_or_error}
-        }
-        data = {"embeds": [embed]}
-        headers = {"Content-Type": "application/json"}
-        response = requests.post(BEAUTIFULVIEW_DISCORD_WEBHOOK_URL, json=data, headers=headers)
-        if response.status_code == 204:
-            print("Successfully sent message to Discord.")
-        else:
-            send_error_to_discord(f"Failed to send message: {response.status_code}, {response.text}")
-    else:
-        api_options.remove(source)
-        fetch_image_and_send_to_discord(api_options)
+    remaining = list(api_options)
+    while remaining:
+        source = random.choice(remaining)
+        print(f"Fetching image from {source['name']}...")
+        image_url, footer_or_error = get_image_url(source)
+        if image_url:
+            embed = {
+                "image": {"url": image_url},
+                "footer": {"text": footer_or_error}
+            }
+            data = {"embeds": [embed]}
+            headers = {"Content-Type": "application/json"}
+            response = requests.post(BEAUTIFULVIEW_DISCORD_WEBHOOK_URL, json=data, headers=headers)
+            if response.status_code == 204:
+                print("Successfully sent message to Discord.")
+            else:
+                send_error_to_discord(f"Failed to send message: {response.status_code}, {response.text}")
+            return
+        remaining.remove(source)
+    send_error_to_discord("No API options available to fetch images.")
 
 fetch_image_and_send_to_discord(api_options)

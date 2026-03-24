@@ -22,8 +22,9 @@ def main():
     wikipedia.set_lang("ja")
 
     today = datetime.datetime.now()
-    month = today.strftime("%m")
-    day = (today + datetime.timedelta(days=1)).strftime("%d")
+    tomorrow = today + datetime.timedelta(days=1)
+    month = tomorrow.strftime("%m")
+    day = tomorrow.strftime("%d")
 
     page_title = f"{month}月{day}日"
     page = resolve_page_with_disambiguation(page_title, selection_rule=SELECTION_FIRST)
