@@ -3,7 +3,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { decode } from 'html-entities';
-import { fetchWithRetry, postDiscordOrThrow, createErrorArray } from '../common/httpClient.js';
+import { fetchWithRetry, postDiscordOrThrow } from '../common/httpClient.js';
+import { handleError, createErrorArray } from '../common/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,9 +36,8 @@ async function getDiscordThreadId() {
   }
 
   if (!data || data.length === 0) {
-    throw new Error('No Discord thread ID found in daily table.');
+    throw new Error('No forum_id found in daily table.');
   }
-
   return data[0].forum_id;
 }
 
@@ -83,28 +83,29 @@ async function fetchGitHubTrends() {
 }
 
 function extractImages(contentHtml) {
-  const imgUrls = [...contentHtml.matchAll(/<img src="([^"]+)"/g)].map((match) => decode(match[1]));
+  const safeHtml = typeof contentHtml === 'string' ? contentHtml : '';
+  const imgUrls = [...safeHtml.matchAll(/<img src="([^"]+)"/g)].map((match) => decode(match[1]));
   return imgUrls.length > 4 ? imgUrls.slice(0, 4) : imgUrls;
 }
 
 function formatDiscordMessages(posts) {
   return posts.slice(0, 10).map((post, index) => {
-    const section = post.content_html.split('<br>')[0];
-    const description = section.startsWith('<img') ? decode(post.content_html.split('<br>')[1]) : decode(section);
+    const sections = (post.content_html ?? '').split('<br>');
+    const description = sections[0]?.startsWith('<img') ? decode(sections[1] ?? '') : decode(sections[0] ?? '');
     const images = extractImages(post.content_html);
 
     return [{
       title: `${index + 1}. ${post.title}`,
       description,
       url: post.url,
-      image: { url: images[0] }
+      ...(images[0] ? { image: { url: images[0] } } : {})
     }];
   });
 }
 
 async function sendToDiscord(embeds) {
   const forumId = await getDiscordThreadId();
-  const webhookUrl = `${DISCORD_DAILY_WEBHOOK_URL}?thread_id=${forumId}`;
+  const webhookUrl = `${DISCORD_DAILY_WEBHOOK_URL}?thread_id=${encodeURIComponent(forumId)}`;
 
   for (const embedSet of embeds) {
     await postDiscordOrThrow({
@@ -115,19 +116,6 @@ async function sendToDiscord(embeds) {
   }
 }
 
-async function handleError(errors) {
-  if (errors.length === 0) {
-    return;
-  }
-
-  const errorMessage = errors.map((err) => err.message).join('\n');
-  console.log(errorMessage);
-  await postDiscordOrThrow({
-    webhookUrl: ERROR_WEBHOOK_URL,
-    payload: { content: `【Daily GitHub Trending Repositories】Errors occurred: ${errorMessage}` },
-    jobName: 'getPopularRepositories:errorWebhook'
-  });
-}
 
 async function main() {
   const errors = createErrorArray();
@@ -139,8 +127,16 @@ async function main() {
   } catch (error) {
     errors.addError(error);
   } finally {
-    await handleError(errors.getErrors());
+    await handleError({
+      errors: errors.getErrors(),
+      label: 'Daily GitHub Trending Repositories',
+      webhookUrl: ERROR_WEBHOOK_URL,
+      jobName: 'getPopularRepositories:errorWebhook'
+    });
   }
 }
 
-main();
+main().catch((error) => {
+  console.error('[getPopularRepositories] Fatal error:', error?.message);
+  process.exitCode = 1;
+});
