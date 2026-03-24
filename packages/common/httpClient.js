@@ -151,13 +151,56 @@ export async function fetchWithRetry(url, options = {}, config = {}) {
   throw new Error(`[${jobName}] Unexpected retry exit for url=${url}`);
 }
 
+const ALLOWED_DISCORD_HOSTS = ['discord.com', 'discordapp.com'];
+const WEBHOOK_PATH_FRAGMENT = '/api/webhooks/';
+const MAX_DISCORD_CONTENT_LEN = 2000;
+
+function validateDiscordWebhookUrl(webhookUrl) {
+  if (!webhookUrl) {
+    throw new Error('Discord webhook URL is not configured.');
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(webhookUrl);
+  } catch {
+    throw new Error('Webhook URL must be an https Discord webhook endpoint.');
+  }
+
+  const host = (parsed.hostname || '').toLowerCase();
+  const isAllowedHost = ALLOWED_DISCORD_HOSTS.some(
+    allowed => host === allowed || host.endsWith(`.${allowed}`)
+  );
+
+  if (parsed.protocol !== 'https:' || !isAllowedHost || !parsed.pathname.includes(WEBHOOK_PATH_FRAGMENT)) {
+    throw new Error('Webhook URL must be an https Discord webhook endpoint.');
+  }
+}
+
+function normalizeDiscordPayload(payload) {
+  const normalized = { ...payload };
+
+  if (!normalized.allowed_mentions) {
+    normalized.allowed_mentions = { parse: [] };
+  }
+
+  if (typeof normalized.content === 'string' && normalized.content.length > MAX_DISCORD_CONTENT_LEN) {
+    normalized.content = normalized.content.slice(0, MAX_DISCORD_CONTENT_LEN);
+  }
+
+  return normalized;
+}
+
 export async function postDiscordOrThrow({ webhookUrl, payload, jobName, fetchImpl, sleepImpl }) {
+  validateDiscordWebhookUrl(webhookUrl);
+  const normalizedPayload = normalizeDiscordPayload(payload);
+
   await fetchWithRetry(
     webhookUrl,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(normalizedPayload)
     },
     { jobName, fetchImpl, sleepImpl }
   );
