@@ -70,7 +70,10 @@ def get_image_url(api_option):
                 "nojsoncallback": 1
             })
             if response.status_code == 200:
-                photo = random.choice(response.json()['photos']['photo'])
+                photos = response.json().get('photos', {}).get('photo', [])
+                if not photos:
+                    return None, "No Flickr images found"
+                photo = random.choice(photos)
                 image_url = f"https://live.staticflickr.com/{photo['server']}/{photo['id']}_{photo['secret']}.jpg"
                 footer = api_option["footer"]
             else:

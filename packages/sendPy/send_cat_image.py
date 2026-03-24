@@ -17,7 +17,7 @@ flickr_footer = 'Image Source: Flickr'
 
 # API options
 api_options = [
-    {"name": "cat", "url": 'https://api.thecatapi.com/v1/images/search', "footer": cat_footer, "key": CAT_API_KEY},
+    {"name": "cat", "url": 'https://api.thecatapi.com/v1/images/search', "footer": cat_footer},
     {"name": "unsplash", "url": 'https://source.unsplash.com/random?cat', "footer": unsplash_footer},
     {"name": "pixabay", "url": 'https://pixabay.com/api/', "footer": pixabay_footer},
     {"name": "flickr", "url": 'https://api.flickr.com/services/rest/', "footer": flickr_footer}
@@ -37,7 +37,7 @@ def get_image_url(api_option):
         if api_option["name"] == "cat":
             headers = {
                 'Content-Type': 'application/json',
-                'x-api-key': api_option["key"]
+                'x-api-key': CAT_API_KEY
             }
             response = requests.get(api_option["url"], headers=headers)
             if response.status_code == 200:
@@ -85,7 +85,10 @@ def get_image_url(api_option):
                 "nojsoncallback": 1
             })
             if response.status_code == 200:
-                photo = random.choice(response.json()['photos']['photo'])
+                photos = response.json().get('photos', {}).get('photo', [])
+                if not photos:
+                    return None, "No Flickr images found"
+                photo = random.choice(photos)
                 image_url = f"https://live.staticflickr.com/{photo['server']}/{photo['id']}_{photo['secret']}.jpg"
                 footer = api_option["footer"]
             else:
