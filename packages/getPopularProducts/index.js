@@ -38,7 +38,9 @@ export class BusinessValidationError extends Error {
 
 function sanitizeErrorMessage(message) {
   return (message || 'Unknown error')
-    .replace(/https?:\/\/\S*(?:token|key|secret|webhook)\S*/ig, '[REDACTED_URL]')
+    .replace(/https?:\/\/\S+/ig, (match) =>
+      /token|key|secret|webhook/i.test(match) ? '[REDACTED_URL]' : match
+    )
     .replace(/[\r\n\t]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
