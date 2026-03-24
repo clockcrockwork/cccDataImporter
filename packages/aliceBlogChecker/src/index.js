@@ -3,7 +3,6 @@ const feedparser = require('feedparser-promised');
 const htmlToText = require('html-to-text');
 const { JSDOM } = require('jsdom');
 const { DateTime } = require('luxon');
-const fs = require('fs');
 const path = require('path');
 
 if (!process.env.GITHUB_ACTIONS) {
@@ -26,8 +25,6 @@ const timezone = 'Asia/Tokyo';
 
 async function handleError(error) {
   const ERROR_WEBHOOK_URL = process.env.ERROR_WEBHOOK_URL;
-  const GH_TOKEN = process.env.GH_TOKEN;
-  const GITHUB_REPO = process.env.GITHUB_REPO;
 
   // エラーがオブジェクトの場合、messageとstackを取り出す
   if (error instanceof Error) {
@@ -59,24 +56,6 @@ async function handleError(error) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content: `【Alice Blog Check】Error: ${error.message}` })
   });
-  // const sanitizedError = {
-  //     message: error.message.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]'),
-  //     stack: error.stack ? error.stack.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]') : 'No stack trace available'
-  // };
-  // await fetch(
-  //     `https://api.github.com/repos/${GITHUB_REPO}/issues`,
-  //     {
-  //         method: 'POST',
-  //         headers: {
-  //             'Content-Type': 'application/json',
-  //             'Authorization': `token ${GH_TOKEN}`
-  //         },
-  //         body: JSON.stringify({
-  //             title: `ALICE Channel Error: ${sanitizedError.message}`,
-  //             body: sanitizedError.stack,
-  //         })
-  //     }
-  // );
 }
 
 const fetchFeeds = async () => {

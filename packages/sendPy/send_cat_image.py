@@ -19,8 +19,8 @@ flickr_footer = 'Image Source: Flickr'
 api_options = [
     {"name": "cat", "url": 'https://api.thecatapi.com/v1/images/search', "footer": cat_footer, "key": CAT_API_KEY},
     {"name": "unsplash", "url": 'https://source.unsplash.com/random?cat', "footer": unsplash_footer},
-    {"name": "pixabay", "url": f'https://pixabay.com/api/?key={PIXABAY_API_KEY}&q=cat&image_type=photo&per_page=3&page=', "footer": pixabay_footer},
-    {"name": "flickr", "url": f'https://api.flickr.com/services/rest/?method=flickr.photos.search&api_key={FLICKR_API_KEY}&tags=cat&per_page=1&page=', "footer": flickr_footer}
+    {"name": "pixabay", "url": 'https://pixabay.com/api/', "footer": pixabay_footer},
+    {"name": "flickr", "url": 'https://api.flickr.com/services/rest/', "footer": flickr_footer}
 ]
 
 def send_error_to_discord(error_message: str):
@@ -56,7 +56,13 @@ def get_image_url(api_option):
 
         elif api_option["name"] == "pixabay":
             page = random.randint(1, 200)
-            response = requests.get(api_option["url"] + str(page))
+            response = requests.get(api_option["url"], params={
+                "key": PIXABAY_API_KEY,
+                "q": "cat",
+                "image_type": "photo",
+                "per_page": 3,
+                "page": page
+            })
             if response.status_code == 200:
                 image_url = random.choice(response.json()['hits'])['webformatURL']
                 footer = api_option["footer"]
@@ -65,7 +71,15 @@ def get_image_url(api_option):
 
         elif api_option["name"] == "flickr":
             page = random.randint(1, 1000)
-            response = requests.get(api_option["url"] + str(page) + "&format=json&nojsoncallback=1")
+            response = requests.get(api_option["url"], params={
+                "method": "flickr.photos.search",
+                "api_key": FLICKR_API_KEY,
+                "tags": "cat",
+                "per_page": 1,
+                "page": page,
+                "format": "json",
+                "nojsoncallback": 1
+            })
             if response.status_code == 200:
                 photo = random.choice(response.json()['photos']['photo'])
                 image_url = f"https://live.staticflickr.com/{photo['server']}/{photo['id']}_{photo['secret']}.jpg"
@@ -78,27 +92,27 @@ def get_image_url(api_option):
         return None, str(error)
 
 def fetch_image_and_send_to_discord(api_options):
-    if not api_options:
-        send_error_to_discord("No API options available to fetch images.")
-        return
+    remaining = list(api_options)
 
-    source = random.choice(api_options)
-    print(f"Fetching image from {source['name']}...")
-    image_url, footer_or_error = get_image_url(source)
-    if image_url:
-        embed = {
-            "image": {"url": image_url},
-            "footer": {"text": footer_or_error}
-        }
-        data = {"embeds": [embed]}
-        headers = {"Content-Type": "application/json"}
-        response = requests.post(CAT_DISCORD_WEBHOOK_URL, json=data, headers=headers)
-        if response.status_code == 204:
-            print("Successfully sent message to Discord.")
-        else:
-            send_error_to_discord(f"Failed to send message: {response.status_code}, {response.text}")
-    else:
-        api_options.remove(source)
-        fetch_image_and_send_to_discord(api_options)
+    while remaining:
+        source = random.choice(remaining)
+        print(f"Fetching image from {source['name']}...")
+        image_url, footer_or_error = get_image_url(source)
+        if image_url:
+            embed = {
+                "image": {"url": image_url},
+                "footer": {"text": footer_or_error}
+            }
+            data = {"embeds": [embed]}
+            headers = {"Content-Type": "application/json"}
+            response = requests.post(CAT_DISCORD_WEBHOOK_URL, json=data, headers=headers)
+            if response.status_code == 204:
+                print("Successfully sent message to Discord.")
+            else:
+                send_error_to_discord(f"Failed to send message: {response.status_code}, {response.text}")
+            return
+        remaining.remove(source)
+
+    send_error_to_discord("No API options available to fetch images.")
 
 fetch_image_and_send_to_discord(api_options)

@@ -7,8 +7,7 @@ import { fileURLToPath } from 'url';
 import sharp from 'sharp';
 import { decode } from 'html-entities';
 import fetch from 'node-fetch';
-import { pipeline } from 'stream';
-import { promisify } from 'util';
+import { createErrorArray } from '../../common/errorUtils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,7 +18,6 @@ if (!process.env.GITHUB_ACTIONS) {
 
 const timezone = 'Asia/Tokyo';
 const processedUrls = new Set();
-const streamPipeline = promisify(pipeline);
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
@@ -29,7 +27,7 @@ const SUPABASE_STORAGE_BUCKET_NAME = process.env.SUPABASE_STORAGE_BUCKET_NAME;
 const SUPABASE_STORAGE_FOLDER_NAME = process.env.SUPABASE_STORAGE_FOLDER_NAME || '';
 const ERROR_WEBHOOK_URL = process.env.ERROR_WEBHOOK_URL;
 const FEED_PARENT_WEBHOOK_URL = process.env.FEED_PARENT_WEBHOOK_URL;
-if (!SUPABASE_URL || !SUPABASE_KEY || !SUPABASE_FEED_TABLE_NAME || !SUPABASE_FEED_TYPE_X || !SUPABASE_STORAGE_BUCKET_NAME) {
+if (!SUPABASE_URL || !SUPABASE_KEY || !SUPABASE_FEED_TABLE_NAME || !SUPABASE_FEED_TYPE_X || !SUPABASE_STORAGE_BUCKET_NAME || !ERROR_WEBHOOK_URL) {
     throw new Error("Missing required environment variables.");
 }
 
@@ -46,15 +44,6 @@ async function getRssFeeds() {
     }
 
     return data;
-}
-
-function createErrorArray() {
-    let errorArray = [];
-    
-    return {
-        addError: (error) => errorArray.push(error),
-        getErrors: () => errorArray
-    };
 }
 
 async function checkForNewArticles(feedUrl, lastRetrieved) {
@@ -169,7 +158,7 @@ async function processImage(imageUrl, imageName) {
 }
 
 async function processFeeds(feeds, concurrencyLimit = 5) {
-  const errors = new Set();
+  const errors = createErrorArray();
   const results = [];
 
   for (let i = 0; i < feeds.length; i += concurrencyLimit) {
@@ -177,11 +166,11 @@ async function processFeeds(feeds, concurrencyLimit = 5) {
     const feedPromises = feedBatch.map(feed => processFeed(feed, errors));
     const batchResults = await Promise.allSettled(feedPromises);
 
-    batchResults.filter(result => result.status === 'rejected').forEach(result => errors.add(result.reason));
+    batchResults.filter(result => result.status === 'rejected').forEach(result => errors.addError(result.reason));
     results.push(...batchResults.filter(result => result.status === 'fulfilled').map(result => result.value));
   }
 
-  return results;
+  return { results, errors };
 }
 
 async function processFeed(feed, errors) {
@@ -256,9 +245,10 @@ async function main() {
     const currentDateTime = DateTime.now().setZone(timezone);
 
     try {
-        const accessToken = await authenticateUser();
+        await authenticateUser();
         const feeds = await getRssFeeds();
-        const results = await processFeeds(feeds);
+        const { results, errors: feedErrors } = await processFeeds(feeds);
+        feedErrors.getErrors().forEach(e => errors.addError(e));
 
         const updates = results.flatMap(result => result.updates);
         const notifications = results.flatMap(result => result.notifications).reverse();
@@ -282,7 +272,7 @@ async function main() {
                 } else {
                     console.error('Full feed data not found for update id:', update.id);
                 }
-            });
+            }).filter(Boolean);
 
             const { error } = await supabase.from(SUPABASE_FEED_TABLE_NAME).upsert(latestUpdates, { onConflict: 'id' }).select();
             if (error) {

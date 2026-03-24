@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { decode } from 'html-entities';
 import { fetchWithRetry, postDiscordOrThrow } from '../common/httpClient.js';
+import { createErrorArray } from '../common/errorUtils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,15 +26,6 @@ if (!SUPABASE_URL || !SUPABASE_KEY || !SUPABASE_DAILY_TABLE_NAME || !ERROR_WEBHO
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-function createErrorArray() {
-  let errorArray = [];
-
-  return {
-    addError: (error) => errorArray.push(error),
-    getErrors: () => errorArray
-  };
-}
-
 async function getDiscordThreadId() {
   const { data, error } = await supabase
     .from(SUPABASE_DAILY_TABLE_NAME)
@@ -41,6 +33,10 @@ async function getDiscordThreadId() {
 
   if (error) {
     throw error;
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error('No Discord thread ID found in database');
   }
 
   return data[0].forum_id;
