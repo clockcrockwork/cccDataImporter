@@ -42,7 +42,7 @@ def main():
         "description": content_snippet,
         "url": page.url,
         "color": 3447003,
-        "timestamp": today.isoformat(),
+        "timestamp": tomorrow.isoformat(),
         "footer": {
             "text": "Powered by Wikipedia"
         },

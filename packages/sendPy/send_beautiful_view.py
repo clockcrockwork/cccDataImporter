@@ -65,7 +65,7 @@ def get_image_url(api_option):
 def fetch_image_and_send_to_discord(api_options):
     remaining = list(api_options)
     while remaining:
-        source = random.choice(remaining)
+        source = remaining.pop(random.randrange(len(remaining)))
         print(f"Fetching image from {source['name']}...")
         image_url, footer_or_error = get_image_url(source)
         if image_url:
@@ -81,7 +81,6 @@ def fetch_image_and_send_to_discord(api_options):
             else:
                 send_error_to_discord(f"Failed to send message: {response.status_code}, {response.text}")
             return
-        remaining.remove(source)
-    send_error_to_discord("No API options available to fetch images.")
+    send_error_to_discord("All API sources failed to fetch images.")
 
 fetch_image_and_send_to_discord(api_options)

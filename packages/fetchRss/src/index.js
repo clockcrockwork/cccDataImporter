@@ -181,7 +181,7 @@ async function processFeeds(feeds, concurrencyLimit = 5) {
     results.push(...batchResults.filter(result => result.status === 'fulfilled').map(result => result.value));
   }
 
-  return results;
+  return { results, errors: errors.getErrors() };
 }
 
 async function processFeed(feed, errors) {
@@ -259,7 +259,8 @@ async function main() {
     try {
         const accessToken = await authenticateUser();
         const feeds = await getRssFeeds();
-        const results = await processFeeds(feeds);
+        const { results, errors: feedErrors } = await processFeeds(feeds);
+        feedErrors.forEach(err => errors.addError(err));
 
         const updates = results.flatMap(result => result.updates);
         const notifications = results.flatMap(result => result.notifications).reverse();

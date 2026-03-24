@@ -85,18 +85,12 @@ const checkAndUpdateFeeds = async (feeds) => {
       
       // 日付文字列を解析して適切なDateTimeオブジェクトを作成する関数
       const parseDate = (dateString) => {
-        let dateTime;
-        try {
-          dateTime = DateTime.fromRFC2822(dateString).setZone(timezone);
-        } catch (e) {
-          try {
-            dateTime = DateTime.fromISO(dateString).setZone(timezone);
-          } catch (e) {
-            console.error('Invalid date format:', e.message);
-            return null;
-          }
-        }
-        return dateTime;
+        let dateTime = DateTime.fromRFC2822(dateString).setZone(timezone);
+        if (dateTime.isValid) return dateTime;
+        dateTime = DateTime.fromISO(dateString).setZone(timezone);
+        if (dateTime.isValid) return dateTime;
+        console.error('Invalid date format:', dateString);
+        return null;
       };
       const latestPubdate = parseDate(pubdateString);
       if (!latestPubdate) {
