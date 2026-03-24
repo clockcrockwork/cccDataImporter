@@ -9,7 +9,7 @@ import { decode } from 'html-entities';
 import fetch from 'node-fetch';
 import { pipeline } from 'stream';
 import { promisify } from 'util';
-import { handleError } from '../../common/errorHandler.js';
+import { handleError, createErrorArray } from '../../common/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,15 +47,6 @@ async function getRssFeeds() {
     }
 
     return data;
-}
-
-function createErrorArray() {
-    let errorArray = [];
-    
-    return {
-        addError: (error) => errorArray.push(error),
-        getErrors: () => errorArray
-    };
 }
 
 async function checkForNewArticles(feedUrl, lastRetrieved) {

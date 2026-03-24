@@ -1,11 +1,13 @@
 import { jest, beforeAll, beforeEach, afterEach, test, expect } from '@jest/globals';
 
+let createErrorArray;
 let toErrorMessage;
 let sanitizeText;
 let handleError;
 
 beforeAll(async () => {
   const module = await import('../errorHandler.js');
+  createErrorArray = module.createErrorArray;
   toErrorMessage = module.toErrorMessage;
   sanitizeText = module.sanitizeText;
   handleError = module.handleError;
@@ -129,6 +131,20 @@ test('handleError filters out falsy values from array', async () => {
   });
 
   expect(console.log).toHaveBeenCalledWith('[TestJob] Error:', 'real error');
+});
+
+test('createErrorArray accumulates errors and returns them', () => {
+  const errors = createErrorArray();
+  errors.addError(new Error('err1'));
+  errors.addError('err2');
+  expect(errors.getErrors()).toHaveLength(2);
+  expect(errors.getErrors()[0].message).toBe('err1');
+  expect(errors.getErrors()[1]).toBe('err2');
+});
+
+test('createErrorArray starts with empty array', () => {
+  const errors = createErrorArray();
+  expect(errors.getErrors()).toEqual([]);
 });
 
 test('handleError handles string errors', async () => {

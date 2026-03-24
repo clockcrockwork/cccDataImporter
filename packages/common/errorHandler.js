@@ -2,6 +2,15 @@ import { postDiscordOrThrow } from './httpClient.js';
 
 const DISCORD_MAX_CONTENT_LENGTH = 1900;
 
+export function createErrorArray() {
+  let errorArray = [];
+
+  return {
+    addError: (error) => errorArray.push(error),
+    getErrors: () => errorArray
+  };
+}
+
 export function toErrorMessage(error) {
   if (error instanceof Error) {
     return error.message;

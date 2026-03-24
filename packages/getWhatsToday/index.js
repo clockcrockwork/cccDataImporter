@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { fetchWithRetry, postDiscordOrThrow } from '../common/httpClient.js';
-import { handleError } from '../common/errorHandler.js';
+import { handleError, createErrorArray } from '../common/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,15 +27,6 @@ if (!SUPABASE_URL || !SUPABASE_KEY || !SUPABASE_DAILY_TABLE_NAME || !ERROR_WEBHO
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-function createErrorArray() {
-  let errorArray = [];
-
-  return {
-    addError: (error) => errorArray.push(error),
-    getErrors: () => errorArray
-  };
-}
 
 async function getDiscordThreadId() {
   const { data, error } = await supabase
