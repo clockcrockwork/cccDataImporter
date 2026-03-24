@@ -18,6 +18,7 @@
   "scripts": {
     "test": "run-s -l test:*",
     "test:aliceBlogChecker": "yarn workspace aliceBlogChecker test --maxWorkers=49%",
+    "test:common": "yarn workspace common test --maxWorkers=49%",
     "test:fetchRss": "yarn workspace fetchRss test --maxWorkers=49%",
     "test:getPopularProducts": "yarn workspace getPopularProducts test --maxWorkers=49%",
     "test:getPopularRepositories": "yarn workspace getPopularRepositories test --maxWorkers=49%",
