@@ -144,7 +144,7 @@ async function processImage(imageUrl, imageName) {
             console.error('The URL does not point to a valid image');
             throw new Error('The URL does not point to a valid image');
         }
-        const imageBuffer = await response.buffer();
+        const imageBuffer = Buffer.from(await response.arrayBuffer());
         const processedImageBuffer = await sharp(imageBuffer)
             .resize(400)
             .png({ quality: 60, compressionLevel: 9 })
@@ -169,7 +169,7 @@ async function processImage(imageUrl, imageName) {
 }
 
 async function processFeeds(feeds, concurrencyLimit = 5) {
-  const errors = new Set();
+  const errors = createErrorArray();
   const results = [];
 
   for (let i = 0; i < feeds.length; i += concurrencyLimit) {
@@ -177,11 +177,11 @@ async function processFeeds(feeds, concurrencyLimit = 5) {
     const feedPromises = feedBatch.map(feed => processFeed(feed, errors));
     const batchResults = await Promise.allSettled(feedPromises);
 
-    batchResults.filter(result => result.status === 'rejected').forEach(result => errors.add(result.reason));
+    batchResults.filter(result => result.status === 'rejected').forEach(result => errors.addError(result.reason));
     results.push(...batchResults.filter(result => result.status === 'fulfilled').map(result => result.value));
   }
 
-  return results;
+  return { results, errors: errors.getErrors() };
 }
 
 async function processFeed(feed, errors) {
@@ -258,7 +258,8 @@ async function main() {
     try {
         const accessToken = await authenticateUser();
         const feeds = await getRssFeeds();
-        const results = await processFeeds(feeds);
+        const { results, errors: feedErrors } = await processFeeds(feeds);
+        feedErrors.forEach(err => errors.addError(err));
 
         const updates = results.flatMap(result => result.updates);
         const notifications = results.flatMap(result => result.notifications).reverse();
@@ -281,8 +282,9 @@ async function main() {
                     return { ...fullFeedData, 'last_retrieved': currentDateTime };
                 } else {
                     console.error('Full feed data not found for update id:', update.id);
+                    return null;
                 }
-            });
+            }).filter(Boolean);
 
             const { error } = await supabase.from(SUPABASE_FEED_TABLE_NAME).upsert(latestUpdates, { onConflict: 'id' }).select();
             if (error) {

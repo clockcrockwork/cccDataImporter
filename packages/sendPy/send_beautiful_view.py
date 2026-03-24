@@ -22,7 +22,7 @@ api_options = [
 
 def send_error_to_discord(error_message: str):
     error_data = {
-        "content": f"【Cat Channel】Error occurred: {error_message}"
+        "content": f"【Beautiful View Channel】Error occurred: {error_message}"
     }
     headers = {"Content-Type": "application/json"}
     response = requests.post(ERROR_WEBHOOK_URL, json=error_data, headers=headers)

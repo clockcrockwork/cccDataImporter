@@ -43,6 +43,9 @@ async function getDiscordThreadId() {
     throw error;
   }
 
+  if (!data || data.length === 0) {
+    throw new Error('No forum_id found in daily table.');
+  }
   return data[0].forum_id;
 }
 
