@@ -59,24 +59,6 @@ async function handleError(error) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content: `【Alice Blog Check】Error: ${error.message}` })
   });
-  // const sanitizedError = {
-  //     message: error.message.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]'),
-  //     stack: error.stack ? error.stack.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]') : 'No stack trace available'
-  // };
-  // await fetch(
-  //     `https://api.github.com/repos/${GITHUB_REPO}/issues`,
-  //     {
-  //         method: 'POST',
-  //         headers: {
-  //             'Content-Type': 'application/json',
-  //             'Authorization': `token ${GH_TOKEN}`
-  //         },
-  //         body: JSON.stringify({
-  //             title: `ALICE Channel Error: ${sanitizedError.message}`,
-  //             body: sanitizedError.stack,
-  //         })
-  //     }
-  // );
 }
 
 const fetchFeeds = async () => {
@@ -100,7 +82,10 @@ const checkAndUpdateFeeds = async (feeds) => {
     const accessToken = await authenticateUser();
     for (const feed of feeds) {
       const parsedFeed = await feedparser.parse({ uri: feed.url });
-      // 日付文字列の値をログに出力する
+      if (!parsedFeed || parsedFeed.length === 0) {
+        console.log(`No items found in feed: ${feed.name}`);
+        continue;
+      }
       const pubdateString = parsedFeed[0].pubdate;
       
       // 日付文字列を解析して適切なDateTimeオブジェクトを作成する関数

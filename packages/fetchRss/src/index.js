@@ -7,8 +7,6 @@ import { fileURLToPath } from 'url';
 import sharp from 'sharp';
 import { decode } from 'html-entities';
 import fetch from 'node-fetch';
-import { pipeline } from 'stream';
-import { promisify } from 'util';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,8 +17,6 @@ if (!process.env.GITHUB_ACTIONS) {
 
 const timezone = 'Asia/Tokyo';
 const processedUrls = new Set();
-const streamPipeline = promisify(pipeline);
-
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const SUPABASE_FEED_TABLE_NAME = process.env.SUPABASE_FEED_TABLE_NAME;
@@ -169,7 +165,7 @@ async function processImage(imageUrl, imageName) {
 }
 
 async function processFeeds(feeds, concurrencyLimit = 5) {
-  const errors = new Set();
+  const errors = createErrorArray();
   const results = [];
 
   for (let i = 0; i < feeds.length; i += concurrencyLimit) {
@@ -177,11 +173,11 @@ async function processFeeds(feeds, concurrencyLimit = 5) {
     const feedPromises = feedBatch.map(feed => processFeed(feed, errors));
     const batchResults = await Promise.allSettled(feedPromises);
 
-    batchResults.filter(result => result.status === 'rejected').forEach(result => errors.add(result.reason));
+    batchResults.filter(result => result.status === 'rejected').forEach(result => errors.addError(result.reason));
     results.push(...batchResults.filter(result => result.status === 'fulfilled').map(result => result.value));
   }
 
-  return results;
+  return { results, feedErrors: errors.getErrors() };
 }
 
 async function processFeed(feed, errors) {
@@ -258,7 +254,8 @@ async function main() {
     try {
         const accessToken = await authenticateUser();
         const feeds = await getRssFeeds();
-        const results = await processFeeds(feeds);
+        const { results, feedErrors } = await processFeeds(feeds);
+        feedErrors.forEach(err => errors.addError(err));
 
         const updates = results.flatMap(result => result.updates);
         const notifications = results.flatMap(result => result.notifications).reverse();
@@ -281,8 +278,9 @@ async function main() {
                     return { ...fullFeedData, 'last_retrieved': currentDateTime };
                 } else {
                     console.error('Full feed data not found for update id:', update.id);
+                    return null;
                 }
-            });
+            }).filter(Boolean);
 
             const { error } = await supabase.from(SUPABASE_FEED_TABLE_NAME).upsert(latestUpdates, { onConflict: 'id' }).select();
             if (error) {
