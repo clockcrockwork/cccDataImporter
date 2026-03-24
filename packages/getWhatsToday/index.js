@@ -72,7 +72,7 @@ async function fetchWorkFlowData() {
 }
 
 async function sendToDiscord(comment, forumId) {
-  const webhookUrl = `${DISCORD_DAILY_WEBHOOK_URL}?thread_id=${forumId}`;
+  const webhookUrl = `${DISCORD_DAILY_WEBHOOK_URL}?thread_id=${encodeURIComponent(forumId)}`;
   const payload = {
     embeds: [
       {

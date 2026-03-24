@@ -83,28 +83,29 @@ async function fetchGitHubTrends() {
 }
 
 function extractImages(contentHtml) {
-  const imgUrls = [...contentHtml.matchAll(/<img src="([^"]+)"/g)].map((match) => decode(match[1]));
+  const safeHtml = typeof contentHtml === 'string' ? contentHtml : '';
+  const imgUrls = [...safeHtml.matchAll(/<img src="([^"]+)"/g)].map((match) => decode(match[1]));
   return imgUrls.length > 4 ? imgUrls.slice(0, 4) : imgUrls;
 }
 
 function formatDiscordMessages(posts) {
   return posts.slice(0, 10).map((post, index) => {
-    const section = post.content_html.split('<br>')[0];
-    const description = section.startsWith('<img') ? decode(post.content_html.split('<br>')[1]) : decode(section);
+    const sections = (post.content_html ?? '').split('<br>');
+    const description = sections[0]?.startsWith('<img') ? decode(sections[1] ?? '') : decode(sections[0] ?? '');
     const images = extractImages(post.content_html);
 
     return [{
       title: `${index + 1}. ${post.title}`,
       description,
       url: post.url,
-      image: { url: images[0] }
+      ...(images[0] ? { image: { url: images[0] } } : {})
     }];
   });
 }
 
 async function sendToDiscord(embeds) {
   const forumId = await getDiscordThreadId();
-  const webhookUrl = `${DISCORD_DAILY_WEBHOOK_URL}?thread_id=${forumId}`;
+  const webhookUrl = `${DISCORD_DAILY_WEBHOOK_URL}?thread_id=${encodeURIComponent(forumId)}`;
 
   for (const embedSet of embeds) {
     await postDiscordOrThrow({
@@ -135,4 +136,7 @@ async function main() {
   }
 }
 
-main();
+main().catch((error) => {
+  console.error('[getPopularRepositories] Fatal error:', error?.message);
+  process.exitCode = 1;
+});
