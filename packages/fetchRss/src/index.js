@@ -9,6 +9,7 @@ import { decode } from 'html-entities';
 import fetch from 'node-fetch';
 import { pipeline } from 'stream';
 import { promisify } from 'util';
+import { handleError, createErrorArray } from '../../common/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,15 +47,6 @@ async function getRssFeeds() {
     }
 
     return data;
-}
-
-function createErrorArray() {
-    let errorArray = [];
-    
-    return {
-        addError: (error) => errorArray.push(error),
-        getErrors: () => errorArray
-    };
 }
 
 async function checkForNewArticles(feedUrl, lastRetrieved) {
@@ -144,7 +136,7 @@ async function processImage(imageUrl, imageName) {
             console.error('The URL does not point to a valid image');
             throw new Error('The URL does not point to a valid image');
         }
-        const imageBuffer = await response.buffer();
+        const imageBuffer = Buffer.from(await response.arrayBuffer());
         const processedImageBuffer = await sharp(imageBuffer)
             .resize(400)
             .png({ quality: 60, compressionLevel: 9 })
@@ -169,7 +161,7 @@ async function processImage(imageUrl, imageName) {
 }
 
 async function processFeeds(feeds, concurrencyLimit = 5) {
-  const errors = new Set();
+  const errors = createErrorArray();
   const results = [];
 
   for (let i = 0; i < feeds.length; i += concurrencyLimit) {
@@ -177,11 +169,11 @@ async function processFeeds(feeds, concurrencyLimit = 5) {
     const feedPromises = feedBatch.map(feed => processFeed(feed, errors));
     const batchResults = await Promise.allSettled(feedPromises);
 
-    batchResults.filter(result => result.status === 'rejected').forEach(result => errors.add(result.reason));
+    batchResults.filter(result => result.status === 'rejected').forEach(result => errors.addError(result.reason));
     results.push(...batchResults.filter(result => result.status === 'fulfilled').map(result => result.value));
   }
 
-  return results;
+  return { results, errors: errors.getErrors() };
 }
 
 async function processFeed(feed, errors) {
@@ -228,16 +220,6 @@ async function processFeed(feed, errors) {
 }
 
 
-async function handleError(errors) {
-    if (errors.length > 0) {
-        const errorMessage = errors.map(err => err.message).join('\n');
-        await fetch(ERROR_WEBHOOK_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: `【fetch RSS】Errors occurred: ${errorMessage}` })
-        });
-    }
-}
 const authenticateUser = async () => {
     try {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -258,7 +240,8 @@ async function main() {
     try {
         const accessToken = await authenticateUser();
         const feeds = await getRssFeeds();
-        const results = await processFeeds(feeds);
+        const { results, errors: feedErrors } = await processFeeds(feeds);
+        feedErrors.forEach(err => errors.addError(err));
 
         const updates = results.flatMap(result => result.updates);
         const notifications = results.flatMap(result => result.notifications).reverse();
@@ -281,8 +264,9 @@ async function main() {
                     return { ...fullFeedData, 'last_retrieved': currentDateTime };
                 } else {
                     console.error('Full feed data not found for update id:', update.id);
+                    return null;
                 }
-            });
+            }).filter(Boolean);
 
             const { error } = await supabase.from(SUPABASE_FEED_TABLE_NAME).upsert(latestUpdates, { onConflict: 'id' }).select();
             if (error) {
@@ -306,7 +290,12 @@ async function main() {
         errors.addError(error);
     }
     finally {
-        await handleError(errors.getErrors());
+        await handleError({
+            errors: errors.getErrors(),
+            label: 'fetch RSS',
+            webhookUrl: ERROR_WEBHOOK_URL,
+            jobName: 'fetchRss:errorWebhook'
+        });
     }
 }
 

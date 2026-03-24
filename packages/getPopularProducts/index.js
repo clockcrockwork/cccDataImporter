@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { decode } from 'html-entities';
 import { fetchWithRetry, postDiscordOrThrow } from '../common/httpClient.js';
+import { createErrorArray } from '../common/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,18 +36,9 @@ export class BusinessValidationError extends Error {
   }
 }
 
-function createErrorArray() {
-  let errorArray = [];
-
-  return {
-    addError: (error) => errorArray.push(error),
-    getErrors: () => errorArray
-  };
-}
-
 function sanitizeErrorMessage(message) {
   return (message || 'Unknown error')
-    .replace(/(https?:\/\/[^\s]*?(?:token|key|secret|webhook)[^\s]*)/ig, '[REDACTED_URL]')
+    .replace(/https?:\/\/\S*(?:token|key|secret|webhook)\S*/ig, '[REDACTED_URL]')
     .replace(/[\r\n\t]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
