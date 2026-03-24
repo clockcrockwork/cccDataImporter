@@ -3,8 +3,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { decode } from 'html-entities';
-import fetch from 'node-fetch';
-
+import { fetchWithRetry, postDiscordOrThrow } from '../common/httpClient.js';
+import { handleError, createErrorArray } from '../common/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,111 +21,90 @@ const PRODUCTHUNT_FEED_URL = process.env.PRODUCTHUNT_FEED_URL;
 const DISCORD_DAILY_WEBHOOK_URL = process.env.DISCORD_DAILY_WEBHOOK_URL;
 
 if (!SUPABASE_URL || !SUPABASE_KEY || !SUPABASE_DAILY_TABLE_NAME || !ERROR_WEBHOOK_URL || !PRODUCTHUNT_FEED_URL || !DISCORD_DAILY_WEBHOOK_URL) {
-    throw new Error("Missing required environment variables.");
+  throw new Error('Missing required environment variables.');
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-function createErrorArray() {
-    let errorArray = [];
-    
-    return {
-        addError: (error) => errorArray.push(error),
-        getErrors: () => errorArray
-    };
-}
+
 async function getDiscordThreadId() {
-    const { data, error } = await supabase
-        .from(SUPABASE_DAILY_TABLE_NAME)
-        .select('forum_id');
-    if (error) {
-        throw error;
-    }
-    return data[0].forum_id;
+  const { data, error } = await supabase
+    .from(SUPABASE_DAILY_TABLE_NAME)
+    .select('forum_id');
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error('No forum_id found in daily table.');
+  }
+  return data[0].forum_id;
 }
 
 async function fetchProductHuntData() {
-    const url = PRODUCTHUNT_FEED_URL;
-    const response = await fetch(url);
-    const data = await response.json();
-    return data.items;
+  const response = await fetchWithRetry(PRODUCTHUNT_FEED_URL, {}, { jobName: 'getPopularProducts:fetchProductHuntData' });
+  const data = await response.json();
+  return data.items;
 }
 
-function extractImages(content_html) {
-    const imgUrls = [...content_html.matchAll(/<img src="([^"]+)"/g)].map(match => decode(match[1]));
-
-    if (imgUrls.length > 4) {
-        return imgUrls.slice(0, 4);
-    }
-    return imgUrls;
+function extractImages(contentHtml) {
+  const imgUrls = [...contentHtml.matchAll(/<img src="([^"]+)"/g)].map((match) => decode(match[1]));
+  return imgUrls.length > 4 ? imgUrls.slice(0, 4) : imgUrls;
 }
 
 function formatDiscordMessages(posts) {
-    return posts.slice(0, 10).map((post, index) => {
-        const description = post.content_html.split('<br>')[0];
-        const images = extractImages(post.content_html);
+  return posts.slice(0, 10).map((post, index) => {
+    const description = post.content_html.split('<br>')[0];
+    const images = extractImages(post.content_html);
 
-        const embeds = [{
-            title: `${index + 1}. ${post.title}`,
-            description: description,
-            url: post.url,
-            timestamp: post.date_published,
-            image: { url: images[0] }
-        }];
+    const embeds = [{
+      title: `${index + 1}. ${post.title}`,
+      description,
+      url: post.url,
+      timestamp: post.date_published,
+      image: { url: images[0] }
+    }];
 
-        images.slice(1).forEach(image => {
-            embeds.push({ image: { url: image } });
-        });
-
-        return embeds;
+    images.slice(1).forEach((image) => {
+      embeds.push({ image: { url: image } });
     });
+
+    return embeds;
+  });
 }
 
-async function sendToDiscord(embeds, retryCount = 0) {
-    try {
-        const forumId = await getDiscordThreadId();
-        const webhookUrl = `${DISCORD_DAILY_WEBHOOK_URL}?thread_id=${forumId}`;
+async function sendToDiscord(embeds) {
+  const forumId = await getDiscordThreadId();
+  const webhookUrl = `${DISCORD_DAILY_WEBHOOK_URL}?thread_id=${forumId}`;
 
-        for (const embedSet of embeds) {
-            const payload = { embeds: embedSet };
-            await fetch(webhookUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-        }
-    } catch (error) {
-        if ((error.message.includes('429') || error.message.includes('429')) && retryCount < 2) {
-            console.log('Rate limit exceeded. Retrying in 1 second...');
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            await sendToDiscord(embeds, retryCount + 1);
-        } else {
-            throw error;
-        }
-    }
+  for (const embedSet of embeds) {
+    const payload = { embeds: embedSet };
+    await postDiscordOrThrow({
+      webhookUrl,
+      payload,
+      jobName: 'getPopularProducts:postDiscordOrThrow'
+    });
+  }
 }
 
-async function handleError(errors) {
-    if (errors.length > 0) {
-        const errorMessage = errors.map(err => err.message).join('\n');
-        await fetch(ERROR_WEBHOOK_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: `【Daily ProductHunt Top 10】Errors occurred: ${errorMessage}` })
-        });
-    }
-}
+
 async function main() {
-    const errors = createErrorArray();
-    try {
-        const posts = await fetchProductHuntData();
-        const discordMessages = formatDiscordMessages(posts);
-        await sendToDiscord(discordMessages);
-    } catch (error) {
-        errors.addError(error);
-    }
-    finally {
-        await handleError(errors.getErrors());
-    }
+  const errors = createErrorArray();
+
+  try {
+    const posts = await fetchProductHuntData();
+    const discordMessages = formatDiscordMessages(posts);
+    await sendToDiscord(discordMessages);
+  } catch (error) {
+    errors.addError(error);
+  } finally {
+    await handleError({
+      errors: errors.getErrors(),
+      label: 'Daily ProductHunt Top 10',
+      webhookUrl: ERROR_WEBHOOK_URL,
+      jobName: 'getPopularProducts:errorWebhook'
+    });
+  }
 }
 
 main();
