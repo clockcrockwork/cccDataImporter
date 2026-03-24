@@ -131,4 +131,4 @@ dist
 
 # Dev IDX
 .idx
-.idx/*
+.idx/*packages/sendPy/__pycache__/
