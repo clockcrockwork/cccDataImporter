@@ -157,8 +157,7 @@ async function processImage(imageUrl, imageName) {
     }
 }
 
-async function processFeeds(feeds, concurrencyLimit = 5) {
-  const errors = createErrorArray();
+async function processFeeds(feeds, errors, concurrencyLimit = 5) {
   const results = [];
 
   for (let i = 0; i < feeds.length; i += concurrencyLimit) {
@@ -170,8 +169,7 @@ async function processFeeds(feeds, concurrencyLimit = 5) {
     results.push(...batchResults.filter(result => result.status === 'fulfilled').map(result => result.value));
   }
 
-  return { results, errors: errors.getErrors() };
-
+  return results;
 }
 
 async function processFeed(feed, errors) {
@@ -238,8 +236,7 @@ async function main() {
     try {
         await authenticateUser();
         const feeds = await getRssFeeds();
-        const { results, errors: feedErrors } = await processFeeds(feeds);
-        feedErrors.forEach(err => errors.addError(err));
+        const results = await processFeeds(feeds, errors);
 
         const updates = results.flatMap(result => result.updates);
         const notifications = results.flatMap(result => result.notifications).reverse();

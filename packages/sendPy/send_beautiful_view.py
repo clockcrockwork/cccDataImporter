@@ -22,12 +22,12 @@ api_options = [
 
 def send_error_to_discord(error_message: str):
     error_data = {
-        "content": f"【Beautiful View Channel】Error occurred: {error_message}"
+        "content": f"【Beautiful View Channel】Error occurred: {error_message[:1900]}"
     }
     headers = {"Content-Type": "application/json"}
     response = requests.post(ERROR_WEBHOOK_URL, json=error_data, headers=headers)
     if response.status_code != 204:
-        print(f"Failed to send error message: {response.status_code}, {response.text}")
+        print(f"Failed to send error message: {response.status_code}")
 
 def get_image_url(api_option):
     try:
@@ -37,29 +37,33 @@ def get_image_url(api_option):
                 image_url = response.url
                 footer = api_option["footer"]
             else:
-                raise Exception(f"Failed to fetch Unsplash image: {response.status_code}, {response.text}")
+                raise Exception(f"Failed to fetch Unsplash image: {response.status_code}")
 
         elif api_option["name"] == "pixabay":
             page = random.randint(1, 200)
             response = requests.get(api_option["url"], params={
                 "key": PIXABAY_API_KEY,
-                "q": "beautiful+view",
+                "q": "beautiful view",
                 "image_type": "photo",
                 "per_page": 3,
                 "page": page
             })
             if response.status_code == 200:
-                image_url = random.choice(response.json()['hits'])['webformatURL']
+                data = response.json()
+                hits = data.get('hits', [])
+                if not hits:
+                    return None, "No Pixabay images found"
+                image_url = random.choice(hits)['webformatURL']
                 footer = api_option["footer"]
             else:
-                raise Exception(f"Failed to fetch Pixabay image: {response.status_code}, {response.text}")
+                raise Exception(f"Failed to fetch Pixabay image: {response.status_code}")
 
         elif api_option["name"] == "flickr":
             page = random.randint(1, 1000)
             response = requests.get(api_option["url"], params={
                 "method": "flickr.photos.search",
                 "api_key": FLICKR_API_KEY,
-                "tags": "beautiful+view",
+                "tags": "beautiful view",
                 "per_page": 1,
                 "page": page,
                 "format": "json",
@@ -70,7 +74,7 @@ def get_image_url(api_option):
                 image_url = f"https://live.staticflickr.com/{photo['server']}/{photo['id']}_{photo['secret']}.jpg"
                 footer = api_option["footer"]
             else:
-                raise Exception(f"Failed to fetch Flickr image: {response.status_code}, {response.text}")
+                raise Exception(f"Failed to fetch Flickr image: {response.status_code}")
 
         return image_url, footer
     except Exception as error:
@@ -81,7 +85,8 @@ def fetch_image_and_send_to_discord(api_options):
 
     while remaining:
         source = random.choice(remaining)
-        print(f"Fetching image from {source['name']}...")
+        source_name = source['name']
+        print(f"Fetching image from {source_name}...")
         image_url, footer_or_error = get_image_url(source)
         if image_url:
             embed = {
@@ -94,7 +99,7 @@ def fetch_image_and_send_to_discord(api_options):
             if response.status_code == 204:
                 print("Successfully sent message to Discord.")
             else:
-                send_error_to_discord(f"Failed to send message: {response.status_code}, {response.text}")
+                send_error_to_discord(f"Failed to send message: {response.status_code}")
             return
         remaining.remove(source)
 
