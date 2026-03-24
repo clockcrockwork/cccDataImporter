@@ -151,6 +151,15 @@ export async function fetchWithRetry(url, options = {}, config = {}) {
   throw new Error(`[${jobName}] Unexpected retry exit for url=${url}`);
 }
 
+export function createErrorArray() {
+  let errorArray = [];
+
+  return {
+    addError: (error) => errorArray.push(error),
+    getErrors: () => errorArray
+  };
+}
+
 export async function postDiscordOrThrow({ webhookUrl, payload, jobName, fetchImpl, sleepImpl }) {
   await fetchWithRetry(
     webhookUrl,
