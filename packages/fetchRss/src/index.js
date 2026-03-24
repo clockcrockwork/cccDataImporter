@@ -7,8 +7,6 @@ import { fileURLToPath } from 'url';
 import sharp from 'sharp';
 import { decode } from 'html-entities';
 import fetch from 'node-fetch';
-import { pipeline } from 'stream';
-import { promisify } from 'util';
 import { handleError, createErrorArray } from '../../common/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,7 +18,6 @@ if (!process.env.GITHUB_ACTIONS) {
 
 const timezone = 'Asia/Tokyo';
 const processedUrls = new Set();
-const streamPipeline = promisify(pipeline);
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
@@ -30,7 +27,7 @@ const SUPABASE_STORAGE_BUCKET_NAME = process.env.SUPABASE_STORAGE_BUCKET_NAME;
 const SUPABASE_STORAGE_FOLDER_NAME = process.env.SUPABASE_STORAGE_FOLDER_NAME || '';
 const ERROR_WEBHOOK_URL = process.env.ERROR_WEBHOOK_URL;
 const FEED_PARENT_WEBHOOK_URL = process.env.FEED_PARENT_WEBHOOK_URL;
-if (!SUPABASE_URL || !SUPABASE_KEY || !SUPABASE_FEED_TABLE_NAME || !SUPABASE_FEED_TYPE_X || !SUPABASE_STORAGE_BUCKET_NAME) {
+if (!SUPABASE_URL || !SUPABASE_KEY || !SUPABASE_FEED_TABLE_NAME || !SUPABASE_FEED_TYPE_X || !SUPABASE_STORAGE_BUCKET_NAME || !ERROR_WEBHOOK_URL) {
     throw new Error("Missing required environment variables.");
 }
 
@@ -160,8 +157,7 @@ async function processImage(imageUrl, imageName) {
     }
 }
 
-async function processFeeds(feeds, concurrencyLimit = 5) {
-  const errors = createErrorArray();
+async function processFeeds(feeds, errors, concurrencyLimit = 5) {
   const results = [];
 
   for (let i = 0; i < feeds.length; i += concurrencyLimit) {
@@ -173,7 +169,7 @@ async function processFeeds(feeds, concurrencyLimit = 5) {
     results.push(...batchResults.filter(result => result.status === 'fulfilled').map(result => result.value));
   }
 
-  return { results, errors: errors.getErrors() };
+  return results;
 }
 
 async function processFeed(feed, errors) {
@@ -238,10 +234,9 @@ async function main() {
     const currentDateTime = DateTime.now().setZone(timezone);
 
     try {
-        const accessToken = await authenticateUser();
+        await authenticateUser();
         const feeds = await getRssFeeds();
-        const { results, errors: feedErrors } = await processFeeds(feeds);
-        feedErrors.forEach(err => errors.addError(err));
+        const results = await processFeeds(feeds, errors);
 
         const updates = results.flatMap(result => result.updates);
         const notifications = results.flatMap(result => result.notifications).reverse();
