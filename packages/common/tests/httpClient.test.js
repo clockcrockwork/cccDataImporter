@@ -97,7 +97,7 @@ test('fetchWithRetry does not retry on 4xx and throws with details', async () =>
     sleepImpl,
     maxRetries: 3,
     baseDelayMs: 10
-  })).rejects.toThrow('method=GET, url=https://example.com, status=400, responseSnippet=bad request details');
+  })).rejects.toThrow('method=GET, url=https://example.com/, status=400, responseSnippet=bad request details');
 
   expect(callCount).toBe(1);
   expect(sleepImpl).not.toHaveBeenCalled();
