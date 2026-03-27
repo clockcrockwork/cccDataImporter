@@ -7,16 +7,18 @@ process.env.SUPABASE_EMAIL = 'alice@example.com';
 process.env.SUPABASE_PASSWORD = 'password';
 process.env.ERROR_WEBHOOK_URL = 'https://discord.com/api/webhooks/error';
 
-const mockParse = jest.fn();
+const mockParseURL = jest.fn();
 const mockUpsert = jest.fn();
 const mockEq = jest.fn();
 const mockSelect = jest.fn();
 const mockFrom = jest.fn();
 const mockSignInWithPassword = jest.fn();
 
-jest.mock('feedparser-promised', () => ({
-  parse: (...args) => mockParse(...args)
-}));
+jest.mock('rss-parser', () => {
+  return jest.fn().mockImplementation(() => ({
+    parseURL: (...args) => mockParseURL(...args)
+  }));
+});
 
 jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn(() => ({
@@ -93,20 +95,22 @@ describe('aliceBlogChecker', () => {
       { id: 2, url: 'https://good.example/rss', webhook: 'https://discord.com/api/webhooks/2', name: 'good', feed_type: 'alice' }
     ];
 
-    mockParse
+    mockParseURL
       .mockRejectedValueOnce(new Error('boom'))
-      .mockResolvedValueOnce([
-        {
-          pubdate: 'Wed, 02 Oct 2002 13:00:00 GMT',
-          title: 'entry',
-          description: '<p>desc</p>',
-          link: 'https://good.example/entry'
-        }
-      ]);
+      .mockResolvedValueOnce({
+        items: [
+          {
+            pubDate: 'Wed, 02 Oct 2002 13:00:00 GMT',
+            title: 'entry',
+            content: '<p>desc</p>',
+            link: 'https://good.example/entry'
+          }
+        ]
+      });
 
     await aliceBlogChecker.checkAndUpdateFeeds(feeds);
 
-    expect(mockParse).toHaveBeenCalledTimes(2);
+    expect(mockParseURL).toHaveBeenCalledTimes(2);
     expect(mockUpsert).toHaveBeenCalledTimes(1);
   });
 
@@ -116,18 +120,20 @@ describe('aliceBlogChecker', () => {
       { id: 2, url: 'https://good.example/rss', webhook: 'https://discord.com/api/webhooks/2', name: 'good', feed_type: 'alice' }
     ];
 
-    mockParse.mockResolvedValue([
-      {
-        pubdate: 'Wed, 02 Oct 2002 13:00:00 GMT',
-        title: 'entry',
-        description: '<p>desc</p>',
-        link: 'https://good.example/entry'
-      }
-    ]);
+    mockParseURL.mockResolvedValue({
+      items: [
+        {
+          pubDate: 'Wed, 02 Oct 2002 13:00:00 GMT',
+          title: 'entry',
+          content: '<p>desc</p>',
+          link: 'https://good.example/entry'
+        }
+      ]
+    });
 
     await aliceBlogChecker.checkAndUpdateFeeds(feeds);
 
-    expect(mockParse).toHaveBeenCalledTimes(1);
+    expect(mockParseURL).toHaveBeenCalledTimes(1);
     expect(mockUpsert).toHaveBeenCalledTimes(1);
     expect(mockPostDiscordOrThrow).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -139,7 +145,7 @@ describe('aliceBlogChecker', () => {
   });
 
   it('includes feed URL in error webhook message', async () => {
-    mockParse.mockRejectedValue(new Error('feed parse failure'));
+    mockParseURL.mockRejectedValue(new Error('feed parse failure'));
 
     await aliceBlogChecker.checkAndUpdateFeeds([
       { id: 1, url: 'https://broken.example/rss', webhook: 'https://discord.com/api/webhooks/1', name: 'broken', feed_type: 'alice' }
