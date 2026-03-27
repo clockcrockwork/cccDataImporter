@@ -92,7 +92,7 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
                     title: article.title,
                     description: article.contentSnippet,
                     url: article.url,
-                    timestamp: article.date_published.toFormat('yyyy-MM-dd\'T\'HH:mm:ssZZ'),
+                    timestamp: DateTime.fromISO(article.date_published, { zone: 'utc' }).setZone(timezone).toISO(),
                 }]
             });
         });
@@ -169,7 +169,7 @@ async function processImage(imageUrl, imageName) {
 }
 
 async function processFeeds(feeds, concurrencyLimit = 5) {
-  const errors = new Set();
+  const errors = createErrorArray();
   const results = [];
 
   for (let i = 0; i < feeds.length; i += concurrencyLimit) {
@@ -177,16 +177,17 @@ async function processFeeds(feeds, concurrencyLimit = 5) {
     const feedPromises = feedBatch.map(feed => processFeed(feed, errors));
     const batchResults = await Promise.allSettled(feedPromises);
 
-    batchResults.filter(result => result.status === 'rejected').forEach(result => errors.add(result.reason));
+    batchResults.filter(result => result.status === 'rejected').forEach(result => errors.addError(result.reason));
     results.push(...batchResults.filter(result => result.status === 'fulfilled').map(result => result.value));
   }
 
-  return results;
+  return { results, errors: errors.getErrors() };
 }
 
 async function processFeed(feed, errors) {
     try {
-        const lastRetrieved = DateTime.fromISO(feed.last_retrieved, { zone: 'utc' }).setZone(timezone) || DateTime.fromISO('1970-01-01T00:00:00Z', { zone: 'utc' }).setZone(timezone);
+        const parsed = DateTime.fromISO(feed.last_retrieved, { zone: 'utc' }).setZone(timezone);
+        const lastRetrieved = parsed.isValid ? parsed : DateTime.fromISO('1970-01-01T00:00:00Z', { zone: 'utc' }).setZone(timezone);
         const newArticles = await checkForNewArticles(feed.url, lastRetrieved);
         if (newArticles.length === 0) return { feedId: feed.id, updates: [], notifications: [] };
         
@@ -258,7 +259,8 @@ async function main() {
     try {
         const accessToken = await authenticateUser();
         const feeds = await getRssFeeds();
-        const results = await processFeeds(feeds);
+        const { results, errors: feedErrors } = await processFeeds(feeds);
+        feedErrors.forEach(err => errors.addError(err));
 
         const updates = results.flatMap(result => result.updates);
         const notifications = results.flatMap(result => result.notifications).reverse();
@@ -278,7 +280,7 @@ async function main() {
             const latestUpdates = selectMap.map(update => {
                 const fullFeedData = feedMap.get(update.id);
                 if (fullFeedData) {
-                    return { ...fullFeedData, 'last_retrieved': currentDateTime };
+                    return { ...fullFeedData, 'last_retrieved': currentDateTime.toISO() };
                 } else {
                     console.error('Full feed data not found for update id:', update.id);
                 }

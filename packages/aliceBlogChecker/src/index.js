@@ -26,8 +26,6 @@ const timezone = 'Asia/Tokyo';
 
 async function handleError(error) {
   const ERROR_WEBHOOK_URL = process.env.ERROR_WEBHOOK_URL;
-  const GH_TOKEN = process.env.GH_TOKEN;
-  const GITHUB_REPO = process.env.GITHUB_REPO;
 
   // エラーがオブジェクトの場合、messageとstackを取り出す
   if (error instanceof Error) {
@@ -59,24 +57,6 @@ async function handleError(error) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content: `【Alice Blog Check】Error: ${error.message}` })
   });
-  // const sanitizedError = {
-  //     message: error.message.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]'),
-  //     stack: error.stack ? error.stack.replace(/https?:\/\/\S+/g, '[REDACTED URL]').replace(/\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\b/g, '[REDACTED ID]') : 'No stack trace available'
-  // };
-  // await fetch(
-  //     `https://api.github.com/repos/${GITHUB_REPO}/issues`,
-  //     {
-  //         method: 'POST',
-  //         headers: {
-  //             'Content-Type': 'application/json',
-  //             'Authorization': `token ${GH_TOKEN}`
-  //         },
-  //         body: JSON.stringify({
-  //             title: `ALICE Channel Error: ${sanitizedError.message}`,
-  //             body: sanitizedError.stack,
-  //         })
-  //     }
-  // );
 }
 
 const fetchFeeds = async () => {
@@ -105,18 +85,12 @@ const checkAndUpdateFeeds = async (feeds) => {
       
       // 日付文字列を解析して適切なDateTimeオブジェクトを作成する関数
       const parseDate = (dateString) => {
-        let dateTime;
-        try {
-          dateTime = DateTime.fromRFC2822(dateString).setZone(timezone);
-        } catch (e) {
-          try {
-            dateTime = DateTime.fromISO(dateString).setZone(timezone);
-          } catch (e) {
-            handleError('Invalid date format:' + e.message);
-            return null;
-          }
-        }
-        return dateTime;
+        let dateTime = DateTime.fromRFC2822(dateString).setZone(timezone);
+        if (dateTime.isValid) return dateTime;
+        dateTime = DateTime.fromISO(dateString).setZone(timezone);
+        if (dateTime.isValid) return dateTime;
+        console.error('Invalid date format:', dateString);
+        return null;
       };
       const latestPubdate = parseDate(pubdateString);
       if (!latestPubdate) {
@@ -265,7 +239,7 @@ const postRandomImageToDiscord = async (webhook) => {
       throw new Error(`Failed to send message: ${discordResponse.status}`);
     }
   } catch (error) {
-    handleError(error);
+    await handleError(error);
   }
 };
 
