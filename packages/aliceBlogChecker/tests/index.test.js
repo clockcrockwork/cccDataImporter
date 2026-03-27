@@ -1,91 +1,157 @@
-const { fetchFeeds } = require('../src/index');
-const { createClient } = require('@supabase/supabase-js');
-const { authenticateUser } = require('../src/index');
-const supabase = require('@supabase/supabase-js');
-const { handleError } = require('../src/index');
+process.env.SUPABASE_URL = 'https://example.supabase.co';
+process.env.SUPABASE_KEY = 'test-key';
+process.env.ALICE_DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/main';
+process.env.SUPABASE_FEED_TABLE_NAME = 'feeds';
+process.env.SUPABASE_FEED_TYPE_ALICE = 'alice';
+process.env.SUPABASE_EMAIL = 'alice@example.com';
+process.env.SUPABASE_PASSWORD = 'password';
+process.env.ERROR_WEBHOOK_URL = 'https://discord.com/api/webhooks/error';
 
-const TEST_FEED_URL = process.env.TEST_FEED;
+const mockParse = jest.fn();
+const mockUpsert = jest.fn();
+const mockEq = jest.fn();
+const mockSelect = jest.fn();
+const mockFrom = jest.fn();
+const mockSignInWithPassword = jest.fn();
 
-jest.mock('@supabase/supabase-js', () => {
-  return {
-    createClient: jest.fn(() => ({
-      from: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      then: jest.fn((callback) => {
-        return callback({ data: [{ id: 1, url: TEST_FEED_URL }], error: null });
-      }),
-    })),
-  };
-});
-
-jest.mock('../src/index', () => ({
-  ...jest.requireActual('../src/index'),
-  handleError: jest.fn(),
+jest.mock('feedparser-promised', () => ({
+  parse: (...args) => mockParse(...args)
 }));
 
-describe('fetchFeeds', () => {
-  it('should fetch feeds from supabase', async () => {
-    const feeds = await fetchFeeds();
-    expect(feeds).toEqual([{ id: 1, url: TEST_FEED_URL }]);
-  });
+jest.mock('@supabase/supabase-js', () => ({
+  createClient: jest.fn(() => ({
+    from: (...args) => mockFrom(...args),
+    auth: {
+      signInWithPassword: (...args) => mockSignInWithPassword(...args)
+    }
+  }))
+}));
 
-  it('should handle errors', async () => {
-    createClient.mockImplementationOnce(() => ({
-      from: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      then: jest.fn((callback, errCallback) => {
-        return errCallback(new Error('Supabase error'));
-      }),
-    }));
+const mockFetchWithRetry = jest.fn();
+const mockPostDiscordOrThrow = jest.fn();
+jest.mock('../../common/httpClient.cjs', () => ({
+  fetchWithRetry: (...args) => mockFetchWithRetry(...args),
+  postDiscordOrThrow: (...args) => mockPostDiscordOrThrow(...args)
+}));
 
-    const feeds = await fetchFeeds();
-    expect(feeds).toEqual([]);
-  });
+mockFrom.mockImplementation(() => ({
+  select: (...args) => mockSelect(...args),
+  upsert: (...args) => mockUpsert(...args)
+}));
 
-  it('should call handleError when there is an error', async () => {
-    createClient.mockImplementationOnce(() => ({
-      from: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      then: jest.fn((callback, errCallback) => {
-        return errCallback(new Error('Supabase error'));
-      }),
-    }));
+mockSelect.mockImplementation(() => ({
+  eq: (...args) => mockEq(...args)
+}));
 
-    await fetchFeeds();
-    expect(handleError).toHaveBeenCalledWith(new Error('Supabase error'));
-  });
+mockEq.mockResolvedValue({ data: [], error: null });
+mockUpsert.mockResolvedValue({ data: {}, error: null });
+mockSignInWithPassword.mockResolvedValue({
+  data: { session: { access_token: 'token' } },
+  error: null
 });
-describe('authenticateUser', () => {
-  it('should authenticate the user and return the access token', async () => {
-    const signInWithPasswordMock = jest.spyOn(supabase.auth, 'signInWithPassword').mockResolvedValue({
-      data: {
-        session: {
-          access_token: 'ACCESS_TOKEN'
-        }
-      },
+
+const aliceBlogChecker = require('../src/index');
+
+describe('aliceBlogChecker', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    global.fetch = jest.fn();
+
+    mockEq.mockResolvedValue({ data: [], error: null });
+    mockUpsert.mockResolvedValue({ data: {}, error: null });
+    mockSignInWithPassword.mockResolvedValue({
+      data: { session: { access_token: 'token' } },
       error: null
     });
-
-    const accessToken = await authenticateUser();
-
-    expect(signInWithPasswordMock).toHaveBeenCalledWith({
-      email: SUPABASE_EMAIL,
-      password: SUPABASE_PASSWORD
-    });
-    expect(accessToken).toBe('ACCESS_TOKEN');
   });
 
-  it('should handle authentication error and throw an error', async () => {
-    const signInWithPasswordMock = jest.spyOn(supabase.auth, 'signInWithPassword').mockRejectedValue(new Error('Authentication error'));
+  it('parseFeedDate supports RFC2822 and ISO', () => {
+    const rfc = aliceBlogChecker.parseFeedDate('Wed, 02 Oct 2002 13:00:00 GMT');
+    const iso = aliceBlogChecker.parseFeedDate('2002-10-02T13:00:00.000Z');
+    const invalid = aliceBlogChecker.parseFeedDate('not-a-date');
 
-    await expect(authenticateUser()).rejects.toThrowError('Authentication error');
+    expect(rfc).not.toBeNull();
+    expect(iso).not.toBeNull();
+    expect(invalid).toBeNull();
+  });
 
-    expect(signInWithPasswordMock).toHaveBeenCalledWith({
-      email: SUPABASE_EMAIL,
-      password: SUPABASE_PASSWORD
+  it('does not call fetch directly and uses httpClient helpers', async () => {
+    mockFetchWithRetry.mockResolvedValue({
+      json: async () => ({ hits: [{ webformatURL: 'https://img.example/test.jpg' }] })
     });
+
+    await aliceBlogChecker.postRandomImageToDiscord('https://discord.com/api/webhooks/target');
+
+    expect(mockFetchWithRetry).toHaveBeenCalledTimes(1);
+    expect(mockPostDiscordOrThrow).toHaveBeenCalledTimes(1);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('continues processing when one feed fails', async () => {
+    const feeds = [
+      { id: 1, url: 'https://bad.example/rss', webhook: 'https://discord.com/api/webhooks/1', name: 'bad', feed_type: 'alice' },
+      { id: 2, url: 'https://good.example/rss', webhook: 'https://discord.com/api/webhooks/2', name: 'good', feed_type: 'alice' }
+    ];
+
+    mockParse
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce([
+        {
+          pubdate: 'Wed, 02 Oct 2002 13:00:00 GMT',
+          title: 'entry',
+          description: '<p>desc</p>',
+          link: 'https://good.example/entry'
+        }
+      ]);
+
+    await aliceBlogChecker.checkAndUpdateFeeds(feeds);
+
+    expect(mockParse).toHaveBeenCalledTimes(2);
+    expect(mockUpsert).toHaveBeenCalledTimes(1);
+  });
+
+  it('continues when first feed URL is unsafe', async () => {
+    const feeds = [
+      { id: 1, url: 'http://localhost/internal', webhook: 'https://discord.com/api/webhooks/1', name: 'bad', feed_type: 'alice' },
+      { id: 2, url: 'https://good.example/rss', webhook: 'https://discord.com/api/webhooks/2', name: 'good', feed_type: 'alice' }
+    ];
+
+    mockParse.mockResolvedValue([
+      {
+        pubdate: 'Wed, 02 Oct 2002 13:00:00 GMT',
+        title: 'entry',
+        description: '<p>desc</p>',
+        link: 'https://good.example/entry'
+      }
+    ]);
+
+    await aliceBlogChecker.checkAndUpdateFeeds(feeds);
+
+    expect(mockParse).toHaveBeenCalledTimes(1);
+    expect(mockUpsert).toHaveBeenCalledTimes(1);
+    expect(mockPostDiscordOrThrow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          content: expect.stringContaining('Unsafe URL for feed url')
+        })
+      })
+    );
+  });
+
+  it('includes feed URL in error webhook message', async () => {
+    mockParse.mockRejectedValue(new Error('feed parse failure'));
+
+    await aliceBlogChecker.checkAndUpdateFeeds([
+      { id: 1, url: 'https://broken.example/rss', webhook: 'https://discord.com/api/webhooks/1', name: 'broken', feed_type: 'alice' }
+    ]);
+
+    expect(mockPostDiscordOrThrow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        webhookUrl: process.env.ERROR_WEBHOOK_URL,
+        payload: expect.objectContaining({
+          content: expect.stringContaining('url=[REDACTED URL:broken.example]')
+        })
+      })
+    );
   });
 });
