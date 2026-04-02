@@ -26,7 +26,10 @@ def send_error_to_discord(error_message: str):
     error_data = {
         "content": f"【Beautiful View Channel】Error occurred: {error_message[:1900]}"
     }
-    post_discord_or_throw(ERROR_WEBHOOK_URL, error_data)
+    try:
+        post_discord_or_throw(ERROR_WEBHOOK_URL, error_data)
+    except Exception as e:
+        print(f"Failed to send error to Discord: {e}")
 
 def get_image_url(api_option):
     try:

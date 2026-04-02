@@ -39,6 +39,11 @@ describe('getPopularRepositories', () => {
       .mockResolvedValueOnce(createJsonResponse([{ title: 'ok-2' }]))
       .mockResolvedValueOnce(createJsonResponse([{ title: 'ok-3' }]))
       .mockResolvedValueOnce(createJsonResponse([{ title: 'ok-4' }]))
+      .mockResolvedValueOnce(createJsonResponse([{ title: 'ok-5' }]))
+      .mockResolvedValueOnce(createJsonResponse([{ title: 'ok-6' }]))
+      .mockResolvedValueOnce(createJsonResponse([{ title: 'ok-7' }]))
+      .mockResolvedValueOnce(createJsonResponse([{ title: 'ok-8' }]))
+      .mockResolvedValueOnce(createJsonResponse([{ title: 'ok-9' }]))
       .mockRejectedValue(new Error('category failed'));
 
     const logMock = jest.fn();
@@ -48,7 +53,7 @@ describe('getPopularRepositories', () => {
       .toThrow('BusinessError: insufficient successful categories');
 
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(22);
-    expect(logMock).toHaveBeenCalledWith(expect.stringContaining('successCount=4, failureCount=18'));
+    expect(logMock).toHaveBeenCalledWith(expect.stringContaining('successCount=9, failureCount=13'));
   });
 
   test('main does not send daily post and reports business error when posts are empty', async () => {
@@ -77,14 +82,19 @@ describe('getPopularRepositories', () => {
       .mockResolvedValueOnce(createJsonResponse([{ title: 'ok-3' }]))
       .mockResolvedValueOnce(createJsonResponse([{ title: 'ok-4' }]))
       .mockResolvedValueOnce(createJsonResponse([{ title: 'ok-5' }]))
+      .mockResolvedValueOnce(createJsonResponse([{ title: 'ok-6' }]))
+      .mockResolvedValueOnce(createJsonResponse([{ title: 'ok-7' }]))
+      .mockResolvedValueOnce(createJsonResponse([{ title: 'ok-8' }]))
+      .mockResolvedValueOnce(createJsonResponse([{ title: 'ok-9' }]))
+      .mockResolvedValueOnce(createJsonResponse([{ title: 'ok-10' }]))
       .mockRejectedValue(new Error('category failed'));
 
     const logMock = jest.fn();
 
     const posts = await fetchGitHubTrends({ fetchWithRetryImpl: fetchWithRetryMock, logImpl: logMock });
 
-    expect(posts).toHaveLength(5);
-    expect(logMock).toHaveBeenCalledWith(expect.stringContaining('successCount=5, failureCount=17'));
+    expect(posts).toHaveLength(10);
+    expect(logMock).toHaveBeenCalledWith(expect.stringContaining('successCount=10, failureCount=12'));
   });
 
   test('treats invalid payload items as failed category', async () => {
