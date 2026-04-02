@@ -1,5 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
-const feedparser = require('feedparser-promised');
+const Parser = require('rss-parser');
+const rssParser = new Parser();
 const htmlToText = require('html-to-text');
 const { JSDOM } = require('jsdom');
 const { DateTime } = require('luxon');
@@ -103,14 +104,14 @@ const checkAndUpdateFeeds = async (feeds) => {
     for (const feed of feeds) {
       try {
         assertSafeUrl(feed.url, { httpsOnly: false, label: 'feed url' });
-        const parsedFeed = await feedparser.parse({ uri: feed.url });
-        if (!parsedFeed.length) {
+        const parsedFeed = await rssParser.parseURL(feed.url);
+        if (!parsedFeed.items || !parsedFeed.items.length) {
           throw new Error(`Feed has no entries. url=${feed.url}`);
         }
 
-        const latestPubdate = parseFeedDate(parsedFeed[0].pubdate);
+        const latestPubdate = parseFeedDate(parsedFeed.items[0].pubDate);
         if (!latestPubdate) {
-          throw new Error(`Invalid date format: ${parsedFeed[0].pubdate}. url=${feed.url}`);
+          throw new Error(`Invalid date format: ${parsedFeed.items[0].pubDate}. url=${feed.url}`);
         }
 
         const lastRetrieved = feed.last_retrieved ? DateTime.fromISO(feed.last_retrieved).setZone(timezone) : null;
@@ -131,7 +132,7 @@ const checkAndUpdateFeeds = async (feeds) => {
 
           if (error) throw error;
           updatesFound = true;
-          await postToDiscord(feed, parsedFeed, lastRetrieved);
+          await postToDiscord(feed, parsedFeed.items, lastRetrieved);
         }
       } catch (error) {
         await aliceHandleError(`Feed processing failed for url=${feed.url}: ${toErrorMessage(error)}`);
@@ -177,7 +178,7 @@ const postToDiscord = async (feed, entries, lastRetrieved = null) => {
   const orderedEntries = [...entries].reverse();
 
   for (const entry of orderedEntries) {
-    const pubdate = parseFeedDate(entry.pubdate);
+    const pubdate = parseFeedDate(entry.pubDate);
     if (!pubdate) {
       await aliceHandleError(`Skip entry with invalid date. url=${feed.url}`);
       continue;
@@ -185,7 +186,7 @@ const postToDiscord = async (feed, entries, lastRetrieved = null) => {
 
     if (lastRetrieved && pubdate <= lastRetrieved) continue;
 
-    const description = entry.description || '';
+    const description = entry.content || entry.contentSnippet || '';
     const dom = new JSDOM(description);
     const imageElement = dom.window.document.querySelector('img');
     const imageUrl = imageElement ? imageElement.src : null;
