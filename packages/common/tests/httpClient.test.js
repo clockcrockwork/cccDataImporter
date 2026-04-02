@@ -97,7 +97,7 @@ test('fetchWithRetry does not retry on 4xx and throws with details', async () =>
     sleepImpl,
     maxRetries: 3,
     baseDelayMs: 10
-  })).rejects.toThrow('method=GET, url=https://example.com, status=400, responseSnippet=bad request details');
+  })).rejects.toThrow('method=GET, url=https://example.com/, status=400, responseSnippet=bad request details');
 
   expect(callCount).toBe(1);
   expect(sleepImpl).not.toHaveBeenCalled();
@@ -182,7 +182,7 @@ test('postDiscordOrThrow sends JSON payload with POST', async () => {
   });
 
   await postDiscordOrThrow({
-    webhookUrl: 'https://discord.test/webhook',
+    webhookUrl: 'https://discord.com/api/webhooks/123/abc',
     payload: { content: 'hello' },
     jobName: 'test:discordPost',
     fetchImpl,
@@ -190,8 +190,81 @@ test('postDiscordOrThrow sends JSON payload with POST', async () => {
   });
 
   expect(calls).toHaveLength(1);
-  expect(calls[0].url).toBe('https://discord.test/webhook');
+  expect(calls[0].url).toBe('https://discord.com/api/webhooks/123/abc');
   expect(calls[0].options.method).toBe('POST');
   expect(calls[0].options.headers['Content-Type']).toBe('application/json');
-  expect(calls[0].options.body).toBe(JSON.stringify({ content: 'hello' }));
+
+  const sentPayload = JSON.parse(calls[0].options.body);
+  expect(sentPayload.content).toBe('hello');
+  expect(sentPayload.allowed_mentions).toEqual({ parse: [] });
+});
+
+test('postDiscordOrThrow throws on missing webhookUrl', async () => {
+  await expect(postDiscordOrThrow({
+    webhookUrl: '',
+    payload: { content: 'hello' },
+    jobName: 'test:missingUrl'
+  })).rejects.toThrow('Discord webhook URL is not configured');
+});
+
+test('postDiscordOrThrow throws on non-Discord URL', async () => {
+  await expect(postDiscordOrThrow({
+    webhookUrl: 'https://example.com/api/webhooks/123/abc',
+    payload: { content: 'hello' },
+    jobName: 'test:nonDiscordUrl'
+  })).rejects.toThrow('Webhook URL must be an https Discord webhook endpoint');
+});
+
+test('postDiscordOrThrow throws on http URL', async () => {
+  await expect(postDiscordOrThrow({
+    webhookUrl: 'http://discord.com/api/webhooks/123/abc',
+    payload: { content: 'hello' },
+    jobName: 'test:httpUrl'
+  })).rejects.toThrow('Webhook URL must be an https Discord webhook endpoint');
+});
+
+test('postDiscordOrThrow throws on null payload', async () => {
+  await expect(postDiscordOrThrow({
+    webhookUrl: 'https://discord.com/api/webhooks/123/abc',
+    payload: null,
+    jobName: 'test:nullPayload'
+  })).rejects.toThrow('Discord payload must be a non-null object');
+});
+
+test('postDiscordOrThrow throws on string payload', async () => {
+  await expect(postDiscordOrThrow({
+    webhookUrl: 'https://discord.com/api/webhooks/123/abc',
+    payload: 'hello',
+    jobName: 'test:stringPayload'
+  })).rejects.toThrow('Discord payload must be a non-null object');
+});
+
+test('postDiscordOrThrow throws on array payload', async () => {
+  await expect(postDiscordOrThrow({
+    webhookUrl: 'https://discord.com/api/webhooks/123/abc',
+    payload: [1, 2],
+    jobName: 'test:arrayPayload'
+  })).rejects.toThrow('Discord payload must be a non-null object');
+});
+
+test('postDiscordOrThrow normalizes payload with content truncation and allowed_mentions', async () => {
+  const calls = [];
+  const fetchImpl = jest.fn(async (url, options) => {
+    calls.push({ url, options });
+    return createResponse({ ok: true, status: 204 });
+  });
+
+  const longContent = 'x'.repeat(2100);
+
+  await postDiscordOrThrow({
+    webhookUrl: 'https://discord.com/api/webhooks/123/abc',
+    payload: { content: longContent },
+    jobName: 'test:normalize',
+    fetchImpl,
+    sleepImpl: async () => {}
+  });
+
+  const sentPayload = JSON.parse(calls[0].options.body);
+  expect(sentPayload.content.length).toBe(2000);
+  expect(sentPayload.allowed_mentions).toEqual({ parse: [] });
 });

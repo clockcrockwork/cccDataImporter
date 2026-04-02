@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { decode } from 'html-entities';
 import { fetchWithRetry, postDiscordOrThrow } from '../common/httpClient.js';
+import { handleError, createErrorArray } from '../common/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,7 +20,6 @@ const ERROR_WEBHOOK_URL = process.env.ERROR_WEBHOOK_URL;
 const GIT_REPOSITORY_FEED_URL = process.env.GIT_REPOSITORY_FEED_URL;
 const DISCORD_DAILY_WEBHOOK_URL = process.env.DISCORD_DAILY_WEBHOOK_URL;
 const MIN_SUCCESS_CATEGORIES = 5;
-const DISCORD_ERROR_MESSAGE_MAX_LENGTH = 1500;
 const DISCORD_EMBED_TEXT_MAX_LENGTH = 4000;
 
 if (!SUPABASE_URL || !SUPABASE_KEY || !SUPABASE_DAILY_TABLE_NAME || !ERROR_WEBHOOK_URL || !GIT_REPOSITORY_FEED_URL || !DISCORD_DAILY_WEBHOOK_URL) {
@@ -27,15 +27,6 @@ if (!SUPABASE_URL || !SUPABASE_KEY || !SUPABASE_DAILY_TABLE_NAME || !ERROR_WEBHO
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-function createErrorArray() {
-  let errorArray = [];
-
-  return {
-    addError: (error) => errorArray.push(error),
-    getErrors: () => errorArray
-  };
-}
 
 function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
@@ -52,15 +43,6 @@ function buildDiscordWebhookUrl(baseUrl, forumId) {
   webhookUrl.searchParams.set('thread_id', trimmedForumId);
   return webhookUrl.toString();
 }
-
-function toDiscordErrorMessage(errors) {
-  const merged = errors
-    .map((err) => (isNonEmptyString(err?.message) ? err.message : 'Unknown error'))
-    .join('\n');
-
-  return sanitizeDiscordText(merged).slice(0, DISCORD_ERROR_MESSAGE_MAX_LENGTH);
-}
-
 
 function sanitizeDiscordText(value) {
   return String(value)
@@ -159,22 +141,22 @@ export async function fetchGitHubTrends({ fetchWithRetryImpl = fetchWithRetry, l
 }
 
 function extractImages(contentHtml) {
-  const imgUrls = [...contentHtml.matchAll(/<img src="([^"]+)"/g)].map((match) => decode(match[1]));
+  const safeHtml = typeof contentHtml === 'string' ? contentHtml : '';
+  const imgUrls = [...safeHtml.matchAll(/<img src="([^"]+)"/g)].map((match) => decode(match[1]));
   return imgUrls.length > 4 ? imgUrls.slice(0, 4) : imgUrls;
 }
 
 function formatDiscordMessages(posts) {
   return posts.slice(0, 10).map((post, index) => {
-    const section = post.content_html.split('<br>')[0] || '';
-    const secondarySection = post.content_html.split('<br>')[1] || '';
-    const description = section.startsWith('<img') ? decode(secondarySection) : decode(section);
+    const sections = (post.content_html ?? '').split('<br>');
+    const description = sections[0]?.startsWith('<img') ? decode(sections[1] ?? '') : decode(sections[0] ?? '');
     const images = extractImages(post.content_html);
 
     return [{
       title: `${index + 1}. ${post.title}`,
       description: sanitizeDiscordText(description),
       url: post.url,
-      image: { url: images[0] }
+      ...(images[0] ? { image: { url: images[0] } } : {})
     }];
   });
 }
@@ -192,21 +174,16 @@ export async function sendToDiscord(embeds, { getDiscordThreadIdImpl = getDiscor
   }
 }
 
-async function handleError(errors) {
-  if (errors.length === 0) {
-    return;
-  }
-
-  const errorMessage = toDiscordErrorMessage(errors);
-  console.log(errorMessage);
-  await postDiscordOrThrow({
+async function defaultHandleError(errors) {
+  await handleError({
+    errors,
+    label: 'Daily GitHub Trending Repositories',
     webhookUrl: ERROR_WEBHOOK_URL,
-    payload: { content: `【Daily GitHub Trending Repositories】Errors occurred: ${errorMessage}` },
     jobName: 'getPopularRepositories:errorWebhook'
   });
 }
 
-export async function main({ fetchGitHubTrendsImpl = fetchGitHubTrends, sendToDiscordImpl = sendToDiscord, handleErrorImpl = handleError } = {}) {
+export async function main({ fetchGitHubTrendsImpl = fetchGitHubTrends, sendToDiscordImpl = sendToDiscord, handleErrorImpl = defaultHandleError } = {}) {
   const errors = createErrorArray();
 
   try {
@@ -227,5 +204,8 @@ export async function main({ fetchGitHubTrendsImpl = fetchGitHubTrends, sendToDi
 }
 
 if (process.env.NODE_ENV !== 'test') {
-  main();
+  main().catch((error) => {
+    console.error('[getPopularRepositories] Fatal error:', error?.message);
+    process.exitCode = 1;
+  });
 }
