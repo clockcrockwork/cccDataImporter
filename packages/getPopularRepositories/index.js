@@ -19,8 +19,9 @@ const SUPABASE_DAILY_TABLE_NAME = process.env.SUPABASE_DAILY_TABLE_NAME;
 const ERROR_WEBHOOK_URL = process.env.ERROR_WEBHOOK_URL;
 const GIT_REPOSITORY_FEED_URL = process.env.GIT_REPOSITORY_FEED_URL;
 const DISCORD_DAILY_WEBHOOK_URL = process.env.DISCORD_DAILY_WEBHOOK_URL;
-const MIN_SUCCESS_CATEGORIES = 5;
+const MIN_SUCCESS_CATEGORIES = 10;
 const DISCORD_EMBED_TEXT_MAX_LENGTH = 4000;
+const DISCORD_EMBED_TITLE_MAX_LENGTH = 256;
 
 if (!SUPABASE_URL || !SUPABASE_KEY || !SUPABASE_DAILY_TABLE_NAME || !ERROR_WEBHOOK_URL || !GIT_REPOSITORY_FEED_URL || !DISCORD_DAILY_WEBHOOK_URL) {
   throw new Error('Missing required environment variables.');
@@ -52,9 +53,19 @@ function sanitizeDiscordText(value) {
     .slice(0, DISCORD_EMBED_TEXT_MAX_LENGTH);
 }
 
+function isValidUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 function isValidPost(post) {
   return isNonEmptyString(post?.title)
     && isNonEmptyString(post?.url)
+    && isValidUrl(post.url)
     && isNonEmptyString(post?.content_html);
 }
 
@@ -153,7 +164,7 @@ function formatDiscordMessages(posts) {
     const images = extractImages(post.content_html);
 
     return [{
-      title: `${index + 1}. ${post.title}`,
+      title: `${index + 1}. ${post.title}`.slice(0, DISCORD_EMBED_TITLE_MAX_LENGTH),
       description: sanitizeDiscordText(description),
       url: post.url,
       ...(images[0] ? { image: { url: images[0] } } : {})
