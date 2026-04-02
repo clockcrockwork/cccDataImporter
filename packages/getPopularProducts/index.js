@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { decode } from 'html-entities';
 import { fetchWithRetry, postDiscordOrThrow } from '../common/httpClient.js';
-import { createErrorArray } from '../common/errorHandler.js';
+import { createErrorArray, toErrorMessage } from '../common/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -174,7 +174,7 @@ export async function handleError(errors) {
     return;
   }
 
-  const errorMessage = errors.map((err) => sanitizeErrorMessage(err?.message)).join(' | ');
+  const errorMessage = errors.map((err) => sanitizeErrorMessage(toErrorMessage(err))).join(' | ');
   const content = truncateForDiscord(`【Daily ProductHunt Top 10】Errors occurred: ${errorMessage}`);
 
   await postDiscordOrThrow({
