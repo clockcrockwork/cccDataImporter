@@ -223,6 +223,30 @@ test('postDiscordOrThrow throws on http URL', async () => {
   })).rejects.toThrow('Webhook URL must be an https Discord webhook endpoint');
 });
 
+test('postDiscordOrThrow throws on null payload', async () => {
+  await expect(postDiscordOrThrow({
+    webhookUrl: 'https://discord.com/api/webhooks/123/abc',
+    payload: null,
+    jobName: 'test:nullPayload'
+  })).rejects.toThrow('Discord payload must be a non-null object');
+});
+
+test('postDiscordOrThrow throws on string payload', async () => {
+  await expect(postDiscordOrThrow({
+    webhookUrl: 'https://discord.com/api/webhooks/123/abc',
+    payload: 'hello',
+    jobName: 'test:stringPayload'
+  })).rejects.toThrow('Discord payload must be a non-null object');
+});
+
+test('postDiscordOrThrow throws on array payload', async () => {
+  await expect(postDiscordOrThrow({
+    webhookUrl: 'https://discord.com/api/webhooks/123/abc',
+    payload: [1, 2],
+    jobName: 'test:arrayPayload'
+  })).rejects.toThrow('Discord payload must be a non-null object');
+});
+
 test('postDiscordOrThrow normalizes payload with content truncation and allowed_mentions', async () => {
   const calls = [];
   const fetchImpl = jest.fn(async (url, options) => {

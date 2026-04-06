@@ -6,6 +6,5 @@
   "scripts": {
     "start:cat": "python send_cat_image.py",
     "start:wiki": "python send_wiki.py"
-  },
-  "dependencies": {}
+  }
 }

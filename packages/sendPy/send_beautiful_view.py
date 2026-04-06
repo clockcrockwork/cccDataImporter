@@ -1,6 +1,8 @@
-import requests
 import random
 import os
+
+import requests
+from discord_http_client import post_discord_or_throw
 
 # Discord Webhook URLs
 BEAUTIFULVIEW_DISCORD_WEBHOOK_URL = os.getenv('BEAUTIFULVIEW_DISCORD_WEBHOOK_URL')
@@ -24,10 +26,10 @@ def send_error_to_discord(error_message: str):
     error_data = {
         "content": f"【Beautiful View Channel】Error occurred: {error_message[:1900]}"
     }
-    headers = {"Content-Type": "application/json"}
-    response = requests.post(ERROR_WEBHOOK_URL, json=error_data, headers=headers)
-    if response.status_code != 204:
-        print(f"Failed to send error message: {response.status_code}")
+    try:
+        post_discord_or_throw(ERROR_WEBHOOK_URL, error_data)
+    except Exception as e:
+        print(f"Failed to send error to Discord: {e}")
 
 def get_image_url(api_option):
     try:
@@ -97,12 +99,8 @@ def fetch_image_and_send_to_discord(api_options):
                 "footer": {"text": footer_or_error}
             }
             data = {"embeds": [embed]}
-            headers = {"Content-Type": "application/json"}
-            response = requests.post(BEAUTIFULVIEW_DISCORD_WEBHOOK_URL, json=data, headers=headers)
-            if response.status_code == 204:
-                print("Successfully sent message to Discord.")
-            else:
-                send_error_to_discord(f"Failed to send message: {response.status_code}")
+            post_discord_or_throw(BEAUTIFULVIEW_DISCORD_WEBHOOK_URL, data)
+            print("Successfully sent message to Discord.")
             return
         remaining.remove(source)
 

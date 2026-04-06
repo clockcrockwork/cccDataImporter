@@ -40,7 +40,12 @@ async function getDiscordThreadId() {
   if (!data || data.length === 0) {
     throw new Error('No forum_id found in daily table.');
   }
-  return data[0].forum_id;
+
+  const forumId = data[0]?.forum_id;
+  if (typeof forumId !== 'string' || forumId.trim().length === 0) {
+    throw new Error('Invalid forum_id: missing or empty Discord thread id.');
+  }
+  return forumId;
 }
 
 async function fetchWorkFlowData() {

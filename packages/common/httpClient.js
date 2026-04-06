@@ -202,6 +202,9 @@ function normalizeDiscordPayload(payload) {
 
 export async function postDiscordOrThrow({ webhookUrl, payload, jobName, fetchImpl, sleepImpl }) {
   validateDiscordWebhookUrl(webhookUrl);
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new Error('Discord payload must be a non-null object.');
+  }
   const normalizedPayload = normalizeDiscordPayload(payload);
 
   await fetchWithRetry(
