@@ -1,3 +1,3 @@
 requests
-wikipedia
-urllib3>=2.5.0 # not directly required, pinned by Snyk to avoid a vulnerability
+wikipedia==1.4.0
+urllib3>=2.6.3 # not directly required, pinned to fix Snyk HIGH/MODERATE vulnerabilities (data amplification, resource throttling, open redirect, sensitive data exposure)
