@@ -116,6 +116,9 @@ async function notifyDiscord(webhookUrl, articles, webhookType, feedType) {
 
 
   
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_IMAGE_FORMATS = ['jpeg', 'png', 'webp', 'gif', 'tiff', 'svg'];
+
 async function processImage(imageUrl, imageName) {
     imageUrl = decode(imageUrl);
     if (processedUrls.has(imageUrl)) {
@@ -133,7 +136,25 @@ async function processImage(imageUrl, imageName) {
             console.error('The URL does not point to a valid image');
             throw new Error('The URL does not point to a valid image');
         }
+
+        const contentLength = parseInt(response.headers.get('content-length'), 10);
+        if (contentLength && contentLength > MAX_IMAGE_SIZE) {
+            console.error(`Image too large (Content-Length: ${contentLength} bytes)`);
+            throw new Error(`Image too large: ${contentLength} bytes`);
+        }
+
         const imageBuffer = Buffer.from(await response.arrayBuffer());
+        if (imageBuffer.length > MAX_IMAGE_SIZE) {
+            console.error(`Image buffer too large: ${imageBuffer.length} bytes`);
+            throw new Error(`Image buffer too large: ${imageBuffer.length} bytes`);
+        }
+
+        const metadata = await sharp(imageBuffer).metadata();
+        if (!metadata.format || !ALLOWED_IMAGE_FORMATS.includes(metadata.format)) {
+            console.error(`Unsupported image format: ${metadata.format}`);
+            throw new Error(`Unsupported image format: ${metadata.format}`);
+        }
+
         const processedImageBuffer = await sharp(imageBuffer)
             .resize(400)
             .png({ quality: 60, compressionLevel: 9 })
