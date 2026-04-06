@@ -196,7 +196,7 @@ const postToDiscord = async (feed, entries, lastRetrieved = null) => {
       description: convertHtmlToMarkdown(description),
       url: entry.link,
       footer: { text: feed.name },
-      image: { url: imageUrl }
+      ...(imageUrl ? { image: { url: imageUrl } } : {})
     };
 
     try {
