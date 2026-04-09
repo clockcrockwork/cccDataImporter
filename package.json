@@ -29,7 +29,7 @@
   },
   "devDependencies": {
     "jest": "^29.7.0",
-    "lerna": "^8.2.4",
+    "lerna": "^9.0.7",
     "license-checker": "^25.0.1",
     "ts-jest": "^29.4.6"
   },
