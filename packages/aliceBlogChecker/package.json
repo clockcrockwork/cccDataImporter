@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.0",
-    "axios": "^1.16.0",
+    "axios": "^1.16.1",
     "dotenv": "^16.4.5",
     "html-to-text": "^9.0.5",
     "jsdom": "^24.0.0",
