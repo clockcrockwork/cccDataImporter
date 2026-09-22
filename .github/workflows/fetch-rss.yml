@@ -14,12 +14,12 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v7
       with:
-        node-version: '20'
+        node-version: '22'
   
     - name: Install libvips
       run: |
@@ -27,7 +27,7 @@ jobs:
         sudo apt-get install -y libvips-dev
 
     - name: Cache Node.js dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: |
           packages/fetchRss/node_modules
