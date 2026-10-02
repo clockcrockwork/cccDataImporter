@@ -62,25 +62,28 @@ jobs:
       - name: Login to Supabase
         id: login_supabase
         run: |
-          RESPONSE=$(curl -s -X POST "${{ secrets.SUPABASE_URL }}/auth/v1/token?grant_type=password" \
+          set +x
+          RESPONSE=$(curl -fsS -X POST "${{ secrets.SUPABASE_URL }}/auth/v1/token?grant_type=password" \
             -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
             -H "Content-Type: application/json" \
             -d '{
               "email": "'"${{ secrets.SUPABASE_EMAIL }}"'",
               "password": "'"${{ secrets.SUPABASE_PASSWORD }}"'"
             }')
-          ACCESS_TOKEN=$(echo $RESPONSE | jq -r '.access_token')
-          if [ "$ACCESS_TOKEN" == "null" ]; then
-            echo "Failed to login to Supabase"
-            echo $RESPONSE
+          if ! ACCESS_TOKEN=$(printf '%s' "$RESPONSE" | jq -ers '
+            select(length == 1) | .[0].access_token
+            | select(type == "string")
+            | select(test("\\A[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\z"))
+          ' 2>/dev/null); then
+            echo "Failed to login to Supabase: invalid authentication response"
             exit 1
           fi
-          echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
+          printf '::add-mask::%s\n' "$ACCESS_TOKEN"
+          printf 'ACCESS_TOKEN=%s\n' "$ACCESS_TOKEN" >> "$GITHUB_ENV"
       - name: Update Forum ID in Supabase
         run: |
           DATE=$(TZ=Asia/Tokyo date +"%Y/%m/%d")
           THREAD_ID=${{ env.THREAD_ID }}
-          ACCESS_TOKEN=${{ env.ACCESS_TOKEN }}
           DATA=$(jq -n --arg date "$DATE" --arg thread_id "$THREAD_ID" '{"date":$date,"forum_id":$thread_id}')
           curl -X PATCH "${{ secrets.SUPABASE_URL }}/rest/v1/${{ secrets.SUPABASE_DAILY_TABLE_NAME }}?id=eq.1" \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
@@ -91,7 +94,6 @@ jobs:
       - name: Logout from Supabase
         if: success()
         run: |
-          ACCESS_TOKEN=${{ env.ACCESS_TOKEN }}
           curl -s -X POST "${{ secrets.SUPABASE_URL }}/auth/v1/logout" \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
             -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
