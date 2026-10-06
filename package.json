@@ -29,7 +29,7 @@
   },
   "devDependencies": {
     "jest": "^29.7.0",
-    "lerna": "^9.0.7",
+    "lerna": "^10.0.1",
     "license-checker": "^25.0.1",
     "ts-jest": "^29.4.6"
   },
@@ -40,7 +40,7 @@
     "handlebars": "^4.7.9",
     "lodash": "^4.18.1",
     "picomatch": "^2.3.2",
-    "brace-expansion": "^1.1.13",
+    "brace-expansion": "^1.1.21",
     "@babel/helpers": "^7.26.10",
     "tar": "^7.5.13",
     "glob": "^10.5.0"
