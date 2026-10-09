@@ -28,7 +28,7 @@
   },
   "devDependencies": {
     "jest": "^29.7.0",
-    "lerna": "^9.0.7",
+    "lerna": "^10.0.1",
     "license-checker": "^25.0.1",
     "ts-jest": "^29.4.6"
   },
@@ -37,8 +37,11 @@
     "handlebars": "^4.7.9",
     "lodash": "^4.18.1",
     "@babel/helpers": "^7.26.10",
-    "tar": "^7.5.13",
-    "**/lerna/minimatch": "^3.1.5"
+    "tar": "^7.5.22",
+    "**/lerna/minimatch": "^3.1.5",
+    "**/lerna/js-yaml": "^4.3.2",
+    "**/nx/brace-expansion": "^5.0.12",
+    "**/nx/axios": "^1.20.0"
   },
   "packageManager": "yarn@1.22.22"
 }

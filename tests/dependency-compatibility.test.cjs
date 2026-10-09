@@ -1,6 +1,8 @@
 const assert = require('node:assert/strict');
 const { createRequire } = require('node:module');
 const path = require('node:path');
+const fs = require('node:fs');
+const os = require('node:os');
 const { test } = require('node:test');
 
 const root = path.resolve(__dirname, '..');
@@ -26,14 +28,46 @@ test('Jest retains the callback glob API it uses to find files', async () => {
   assert.ok(matches.includes('packages/common/package.json'));
 });
 
-test('Yarn parsers can parse YAML lock data via js-yaml safeLoad', () => {
-  const { parseSyml } = require('@yarnpkg/parsers');
-  assert.deepEqual(parseSyml('answer: hello\n'), { answer: 'hello' });
+test('Lerna parses YAML through its own js-yaml dependency', () => {
+  const lernaRequire = createRequire(require.resolve('lerna'));
+  const { load } = lernaRequire('js-yaml');
+  assert.deepEqual(load('packages:\n  - packages/*\n'), { packages: ['packages/*'] });
+  assert.throws(() => load('value: !!js/function "function () {}"'), /unknown tag/);
 });
 
-test('front-matter keeps its default safe YAML parser', () => {
-  const fm = require('front-matter');
-  assert.equal(fm('---\ntitle: hello\n---\nbody').attributes.title, 'hello');
+test('Nx reads YAML files through its current consumer API', () => {
+  const { readYamlFile } = require('nx/src/utils/fileutils');
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'importer-yaml-'));
+  const filename = path.join(directory, 'fixture.yml');
+  try {
+    fs.writeFileSync(filename, 'answer: 42\npackages:\n  - packages/*\n');
+    assert.deepEqual(readYamlFile(filename), { answer: 42, packages: ['packages/*'] });
+    assert.deepEqual(readYamlFile(filename, { failsafe: true }), { answer: '42', packages: ['packages/*'] });
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('Lerna and Nx load the reviewed same-major security patches', () => {
+  const lernaRequire = createRequire(require.resolve('lerna'));
+  const semver = lernaRequire('semver');
+  assert.ok(semver.satisfies(lernaRequire('js-yaml/package.json').version, '^4.3.2'));
+  assert.ok(semver.satisfies(from('nx')('brace-expansion/package.json').version, '^5.0.12'));
+});
+
+test('Nx uses the patched Axios API with an isolated adapter', async () => {
+  const nxRequire = from('nx');
+  const axios = nxRequire('axios');
+  const semver = createRequire(require.resolve('lerna'))('semver');
+  assert.ok(semver.satisfies(axios.VERSION, '^1.20.0'));
+  const response = await axios.get('https://fixture.invalid/data', {
+    adapter: async (config) => {
+      assert.equal(config.method, 'get');
+      assert.equal(config.url, 'https://fixture.invalid/data');
+      return { data: { result: 'fixture' }, status: 200, statusText: 'OK', headers: {}, config };
+    },
+  });
+  assert.deepEqual(response.data, { result: 'fixture' });
 });
 
 test('minimatch uses a brace-expansion implementation from its own API generation', () => {
@@ -52,6 +86,10 @@ test('tinyglobby matches workspace manifests through picomatch 4', () => {
 
 test('Sharp can decode and resize an in-memory image with the committed optional packages', async () => {
   const sharp = from('fetchRss')('sharp');
+  const semver = createRequire(require.resolve('lerna'))('semver');
+  assert.ok(semver.satisfies(sharp.versions.sharp, '^0.35.5'));
+  assert.ok(semver.gte(sharp.versions.rsvg, '2.63.2'));
+  assert.ok(semver.gte(sharp.versions.vips, '8.18.7'));
   const png = await sharp({ create: { width: 2, height: 2, channels: 3, background: '#112233' } }).png().toBuffer();
   const result = await sharp(png).resize(1, 1).png().toBuffer({ resolveWithObject: true });
   assert.equal(result.info.width, 1);
