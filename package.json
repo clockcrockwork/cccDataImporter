@@ -15,17 +15,16 @@
     "rss-parser": "^3.13.0"
   },
   "scripts": {
-    "test": "run-s -l test:*",
-    "test:aliceBlogChecker": "yarn workspace aliceBlogChecker test --maxWorkers=49%",
-    "test:common": "yarn workspace common test --maxWorkers=49%",
-    "test:fetchRss": "yarn workspace fetchRss test --maxWorkers=49%",
-    "test:getPopularProducts": "yarn workspace getPopularProducts test --maxWorkers=49%",
-    "test:getPopularRepositories": "yarn workspace getPopularRepositories test --maxWorkers=49%",
-    "test:notifyDiscord": "yarn workspace notifyDiscord test --maxWorkers=49%",
+    "test": "node --test tests/*.test.cjs && node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
+    "test:aliceBlogChecker": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --runTestsByPath packages/aliceBlogChecker/tests/index.test.js",
+    "test:common": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --runTestsByPath packages/common/tests/errorHandler.test.js packages/common/tests/httpClient.test.js",
+    "test:getPopularProducts": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --runTestsByPath packages/getPopularProducts/tests/index.test.js",
+    "test:getPopularRepositories": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --runTestsByPath packages/getPopularRepositories/tests/index.test.js",
     "upgrade": "yarn workspaces foreach run upgrade-interactive --latest && yarn dedupe && yarn install",
     "upgrade-security": "yarn workspaces foreach run upgrade-interactive --latest --pattern '\\bvulnerable\\b' && yarn dedupe && yarn install",
     "license-check": "yarn workspaces foreach run license-checker --summary --production --failOn",
-    "license-output": "license-checker --summary --production --json > license/licenses-root.json && yarn workspaces run license-checker --summary --production --json > license/licenses-packages.json"
+    "license-output": "license-checker --summary --production --json > license/licenses-root.json && yarn workspaces run license-checker --summary --production --json > license/licenses-packages.json",
+    "test:dependencies": "node --test tests/*.test.cjs"
   },
   "devDependencies": {
     "jest": "^29.7.0",
@@ -34,15 +33,15 @@
     "ts-jest": "^29.4.6"
   },
   "resolutions": {
-    "minimatch": "^3.1.5",
-    "js-yaml": "^4.1.1",
     "tmp": "^0.2.4",
     "handlebars": "^4.7.9",
     "lodash": "^4.18.1",
-    "picomatch": "^2.3.2",
-    "brace-expansion": "^1.1.21",
     "@babel/helpers": "^7.26.10",
-    "tar": "^7.5.13",
-    "glob": "^10.5.0"
-  }
+    "tar": "^7.5.22",
+    "**/lerna/minimatch": "^3.1.5",
+    "**/lerna/js-yaml": "^4.3.2",
+    "**/nx/brace-expansion": "^5.0.12",
+    "**/nx/axios": "^1.20.0"
+  },
+  "packageManager": "yarn@1.22.22"
 }
