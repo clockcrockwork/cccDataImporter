@@ -16,20 +16,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
   
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-  
-      - name: Cache Node.js dependencies
-        uses: actions/cache@v6
-        with:
-          path: |
-            packages/getWhatsToday/node_modules
-            ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+      - name: Set up Node.js and locked dependencies
+        uses: ./.github/actions/setup-node-yarn
   
       - name: Set up environment variables
         run: |
@@ -45,11 +33,6 @@ jobs:
           echo "DIFY_USER=${{ secrets.DIFY_USER }}" >> $GITHUB_ENV
           echo "DIFY_WORKFLOW_ID=${{ secrets.DIFY_WORKFLOW_ID }}" >> $GITHUB_ENV
           
-      - name: Install dependencies
-        run: |
-          yarn install
-        working-directory: packages/getWhatsToday
-  
       - name: Run Notify What's Today wiki
         run: |
           node index.js

@@ -9,13 +9,15 @@
 ## 依存関係とローカル検証
 
 このリポジトリの依存関係は **Yarn Classic 1.22.22 と `yarn.lock`** を正本とします。
-GitHub Actions、Gitpod、Lerna は Yarn を使用しています。Node は Lerna の要件
-（22.13 以上の 22 系、24 系、または 26 系）を満たす版を使用してください。
-Lerna 10 への更新により Node 20 は対応対象外です。
-既存の Node/Actions 移行 PR #874 はこの依存修正とは別です。
+アプリの Node は **24 系**とし、使用するパッチ版をルートの `.nvmrc` に固定します。
+GitHub Actions と Gitpod もこのファイルを参照します。Node のパッチ更新は
+`.nvmrc` を変更し、依存インストールと以下のテストを確認してください。
+GitHub Actions 自体の内部ランタイムは各 Action の管理対象です。
 
 ```sh
-corepack yarn install --frozen-lockfile
+nvm install
+nvm use
+corepack yarn install --frozen-lockfile --non-interactive
 corepack yarn test
 ```
 
@@ -26,10 +28,29 @@ corepack yarn test
 網羅性までは保証しません。依存検査の Sharp はメモリ内の画像だけを扱います。
 アプリの `start` や実際の投稿・認証処理は検証コマンドに含めません。
 
+## 秘密情報を使わないテスト CI
+
+`Application tests` は `origin` 向けの Pull Request と `origin` への push で実行します。
+標準の `ubuntu-latest` runner、読み取り専用権限、20 分の制限で、リポジトリの
+secrets を渡さず `yarn test` 全体を実行します。既存テストの外部 API はモックまたは
+注入したテスト用クライアントで扱い、Discord 投稿・Supabase 認証を起動しません。
+インストール・テスト後には manifest と lockfile が書き換わっていないことも確認します。
+
+Node を使う定期処理の依存インストールとテスト CI は共通の
+`.github/actions/setup-node-yarn` を使用します。Yarn の版は `packageManager` から
+確認し、リポジトリルートで frozen install します。キャッシュ対象は Yarn の
+ダウンロードだけで、キーには Node の固定版・manifest・`yarn.lock` を含めます。
+`node_modules` や npm のキャッシュは再利用しません。
+
+RSS の Sharp は `yarn.lock` にある optional binary を使用します。
+`SHARP_IGNORE_GLOBAL_LIBVIPS=1` によりホストの libvips 検出を無効にし、
+実行時の `yarn add sharp` や `--ignore-engines` は使いません。
+依存テストのメモリ内画像変換で、実際に読み込まれた Sharp/libvips を確認します。
+`packages/fetchRss/start-with-deps.sh` も同じ固定 Node と root lockfile を使います。
+
 `package-lock.json` は過去の npm グラフです。Yarn の正本とは一致せず、例えば
 Supabase の解決版が異なるため、このファイルからの `npm ci` は同等の検証にはなりません。
-現在は既存ワークフローのキャッシュキーが参照しているので残しています。
-削除する場合はキャッシュキーを `yarn.lock` へ移す作業と合わせて行ってください。
+CI のインストールとキャッシュでは参照せず、履歴との比較用に残しています。
 
 依存パッケージの major を一律に置換する `resolutions` は使用しません。
 Lerna の `minimatch` 3.1.4 → 3.1.5 以上、`js-yaml` 4.3.0 → 4.3.2 以上、

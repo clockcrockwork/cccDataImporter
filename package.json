@@ -43,5 +43,8 @@
     "**/nx/brace-expansion": "^5.0.12",
     "**/nx/axios": "^1.20.0"
   },
-  "packageManager": "yarn@1.22.22"
+  "packageManager": "yarn@1.22.22",
+  "engines": {
+    "node": "24.x"
+  }
 }
