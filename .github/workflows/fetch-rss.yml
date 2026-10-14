@@ -16,26 +16,9 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v7
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v7
-      with:
-        node-version: '22'
+    - name: Set up Node.js and locked dependencies
+      uses: ./.github/actions/setup-node-yarn
   
-    - name: Install libvips
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libvips-dev
-
-    - name: Cache Node.js dependencies
-      uses: actions/cache@v6
-      with:
-        path: |
-          packages/fetchRss/node_modules
-          ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
-
     - name: Set up environment variables
       run: |
         echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> $GITHUB_ENV
@@ -49,16 +32,6 @@ jobs:
         echo "SUPABASE_PASSWORD=${{ secrets.SUPABASE_PASSWORD }}" >> $GITHUB_ENV
         echo "FEED_PARENT_WEBHOOK_URL=${{ secrets.FEED_PARENT_WEBHOOK_URL }}" >> $GITHUB_ENV
         
-    - name: Add Sharp
-      run: |
-        yarn add sharp --ignore-engines
-      working-directory: packages/fetchRss
-      
-    - name: Install dependencies
-      run: |
-        yarn install --network-concurrency 1 --ignore-engines
-      working-directory: packages/fetchRss
-
     - name: Verify Sharp installation
       run: |
         node -e "require('sharp')"

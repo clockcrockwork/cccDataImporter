@@ -1,11 +1,15 @@
 #!/bin/bash
+set -euo pipefail
 
-# Update package list and install libvips
-sudo apt-get update
-sudo apt-get install -y libvips
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT"
+if [ "$(node --version)" != "v$(cat .nvmrc)" ]; then
+  echo "Use the Node version in .nvmrc (nvm install && nvm use) before starting RSS." >&2
+  exit 1
+fi
 
-# Ensure optional dependencies can be installed
-yarn add sharp --ignore-engines
+# Keep the locked optional Sharp/libvips binaries; never rewrite dependencies at startup.
+SHARP_IGNORE_GLOBAL_LIBVIPS=1 corepack yarn install --frozen-lockfile --non-interactive
 
-# Run the Node.js script
+cd packages/fetchRss
 node src/index.js

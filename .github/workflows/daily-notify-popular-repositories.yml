@@ -16,20 +16,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-
-      - name: Cache Node.js dependencies
-        uses: actions/cache@v6
-        with:
-          path: |
-            packages/getPopularRepositories/node_modules
-            ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+      - name: Set up Node.js and locked dependencies
+        uses: ./.github/actions/setup-node-yarn
 
       - name: Set up environment variables
         run: |
@@ -42,11 +30,6 @@ jobs:
           echo "SUPABASE_PASSWORD=${{ secrets.SUPABASE_PASSWORD }}" >> $GITHUB_ENV
           echo "DISCORD_DAILY_WEBHOOK_URL=${{ secrets.DISCORD_DAILY_WEBHOOK_URL }}" >> $GITHUB_ENV
         
-      - name: Install dependencies
-        run: |
-          yarn install
-        working-directory: packages/getPopularRepositories
-
       - name: Run Notify Popular Repositories
         run: |
           node index.js

@@ -5,6 +5,7 @@
 # Learn more from ready-to-use templates: https://www.gitpod.io/docs/introduction/getting-started/quickstart
 
 tasks:
-  - init: yarn install
-
-
+  - before: |
+      nvm install
+      nvm use
+    init: corepack yarn install --frozen-lockfile --non-interactive

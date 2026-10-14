@@ -1,0 +1,39 @@
+name: Application tests
+
+on:
+  pull_request:
+    branches: [origin]
+  push:
+    branches: [origin]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js and locked dependencies
+        uses: ./.github/actions/setup-node-yarn
+
+      - name: Run dependency and application tests
+        env:
+          NODE_ENV: test
+          CI: 'true'
+          NX_DAEMON: 'false'
+          NX_NO_CLOUD: 'true'
+        run: yarn test
+
+      - name: Verify installation and tests did not rewrite dependency manifests
+        if: always()
+        run: git diff --exit-code -- package.json yarn.lock package-lock.json packages/*/package.json
