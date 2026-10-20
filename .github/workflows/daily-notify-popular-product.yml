@@ -3,9 +3,10 @@ name: Notify Popular Products
 permissions:
   contents: read
 
+# CI40: Scheduled Product Hunt fetching is paused after repeated RSSHub 403 responses.
+# Keep workflow_dispatch for manual recovery. Re-enable the schedule only after
+# the feed endpoint and downstream Discord delivery have been verified.
 on:
-  schedule:
-   - cron: '58 23 * * *'
   workflow_dispatch:
 
 jobs:
