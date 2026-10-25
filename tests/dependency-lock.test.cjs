@@ -12,14 +12,15 @@ const semver = lernaRequire('semver');
 const root = path.resolve(__dirname, '..');
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const lock = parse(fs.readFileSync(path.join(root, 'yarn.lock'), 'utf8'));
-const apiSensitive = new Set(['minimatch', 'glob', 'js-yaml', 'picomatch', 'brace-expansion', 'axios']);
+const apiSensitive = new Set(['minimatch', 'glob', 'js-yaml', 'picomatch', 'brace-expansion', 'axios', 'undici']);
 
 function findApiViolations(entries) {
   const violations = [];
   for (const [selector, parent] of Object.entries(entries)) {
     for (const [name, range] of Object.entries(parent.dependencies || {})) {
       if (!apiSensitive.has(name)) continue;
-      const child = entries[`${name}@${range}`];
+      const child = entries[`${name}@${range}`] || Object.entries(entries)
+        .find(([selectors]) => selectors.split(/,\s*/).includes(`${name}@${range}`))?.[1];
       if (!child) {
         violations.push(`${selector}: missing ${name}@${range}`);
         continue;
@@ -33,7 +34,9 @@ function findApiViolations(entries) {
             ? '^5.0.12'
             : selector.startsWith('nx@') && name === 'axios' && range === '1.18.1'
               ? '^1.20.0'
-              : range;
+              : selector.startsWith('nx@') && name === 'undici' && range === '7.29.0'
+                ? '7.30.1'
+                : range;
       if (!semver.satisfies(child.version, patchRange)) {
         violations.push(`${selector} -> ${name}@${range} resolved ${child.version}`);
       }
@@ -68,6 +71,7 @@ for (const [consumer, name, range, patched, wrongMajor] of [
   ['lerna@^10.0.1', 'js-yaml', '4.3.0', '4.3.2', '3.15.2'],
   ['nx@>=23.1.0 < 24.0.0', 'brace-expansion', '5.0.9', '5.0.12', '1.1.21'],
   ['nx@>=23.1.0 < 24.0.0', 'axios', '1.18.1', '1.20.0', '0.30.3'],
+  ['nx@>=23.1.0 < 24.0.0', 'undici', '7.29.0', '7.30.1', '6.21.3'],
 ]) {
   test(`the ${consumer}/${name} patch exception cannot mask another consumer or major`, () => {
     const fixture = (parent, version) => ({
@@ -85,4 +89,12 @@ test('multiple API generations are not collapsed by a blanket resolution', () =>
   for (const name of apiSensitive) {
     assert.equal(manifest.resolutions[name], undefined, `${name} must follow its consumer's range`);
   }
+});
+
+test('Handlebars and Undici security resolutions stay narrowly scoped', () => {
+  assert.equal(manifest.resolutions.handlebars, '^4.7.10');
+  assert.equal(manifest.resolutions['**/nx/undici'], '7.30.1');
+  assert.equal(manifest.resolutions.undici, undefined);
+  assert.equal(lock.object['handlebars@^4.7.10'].version, '4.7.10');
+  assert.equal(lock.object['undici@7.29.0'].version, '7.30.1');
 });
