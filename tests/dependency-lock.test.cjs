@@ -34,9 +34,9 @@ function findApiViolations(entries) {
             ? '^5.0.12'
             : selector.startsWith('nx@') && name === 'axios' && range === '1.18.1'
               ? '^1.20.0'
-            : selector.startsWith('nx@') && name === 'undici' && range === '7.29.0'
-              ? '7.30.1'
-              : range;
+              : selector.startsWith('nx@') && name === 'undici' && range === '7.29.0'
+                ? '7.30.1'
+                : range;
       if (!semver.satisfies(child.version, patchRange)) {
         violations.push(`${selector} -> ${name}@${range} resolved ${child.version}`);
       }
