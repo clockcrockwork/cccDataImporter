@@ -23,6 +23,12 @@ test('Nx HTTP client uses patched Undici fetch for abortable JSON and response s
     .reply(200, 'first-second', { headers: { 'content-type': 'application/octet-stream' } });
 
   const originalAgent = undici.EnvHttpProxyAgent;
+  assert.equal(typeof originalAgent, 'function');
+  const realAgent = new originalAgent({
+    httpProxy: 'http://127.0.0.1:1',
+    httpsProxy: 'http://127.0.0.1:1',
+  });
+  await realAgent.close();
   const oldEnv = {
     HTTP_PROXY: process.env.HTTP_PROXY,
     http_proxy: process.env.http_proxy,
@@ -41,7 +47,10 @@ test('Nx HTTP client uses patched Undici fetch for abortable JSON and response s
   delete process.env.all_proxy;
   process.env.NO_PROXY = '';
   process.env.no_proxy = '';
-  undici.EnvHttpProxyAgent = function TestProxyAgent() { return mockAgent; };
+  undici.EnvHttpProxyAgent = function TestProxyAgent(options) {
+    assert.deepEqual(options, { httpProxy: process.env.HTTP_PROXY, httpsProxy: undefined });
+    return mockAgent;
+  };
 
   try {
     const nxRoot = require('node:path').dirname(require.resolve('nx/package.json'));
